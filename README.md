@@ -1,24 +1,41 @@
-# Uniswap V2
+# Uniswap V2 xDAI Deployment
 
-[![Actions Status](https://github.com/Uniswap/uniswap-v2-core/workflows/CI/badge.svg)](https://github.com/Uniswap/uniswap-v2-core/actions)
-[![Version](https://img.shields.io/npm/v/@uniswap/v2-core)](https://www.npmjs.com/package/@uniswap/v2-core)
+Requires checking out the Uniswap Periphery: https://github.com/1Hive/uniswap-v2-periphery
 
-In-depth documentation on Uniswap V2 is available at [uniswap.org](https://uniswap.org/docs).
+1) Install dependencies in both this repo and the periphery repo:
+```
+$ yarn install
+```
 
-The built contract artifacts can be browsed via [unpkg.com](https://unpkg.com/browse/@uniswap/v2-core@latest/).
+2) Copy private key that contains xDAI into this repo and the the periphery repo's `truffle-config.js` where specified
 
-# Local Development
+### In the uniswap-v2-core repo
 
-The following assumes the use of `node@>=10`.
+3) Update the `FEE_TO_SETTER_ADDRESS` in the `migrations/2_deploy.js` file if required
 
-## Install Dependencies
+4) Deploy to xDAI:
+```
+$ npx truffle migrate --network xdai
+```
 
-`yarn`
+5) Get the `init code hash`:
+```
+$ npx truffle exec scripts/getUniswapV2PairBytecode.js
+```
 
-## Compile Contracts
+### In the uniswap-v2-periphery repo
 
-`yarn compile`
+6) Copy the previously output `UniswapV2Factory` address to the `FACTORY_ADDRESS` in the `migrations/2_deploy.js` file
 
-## Run Tests
+7) Update the `WRAPPED_ETH` address in the `migrations/2_deploy.js` file if required
 
-`yarn test`
+8) Copy the `init code hash` previously output to `contracts/libraries/UniswapV2Library.sol` at line 24
+
+9) Deploy to xDAI:
+```
+$ npx truffle migrate --network xdai
+```
+
+Note it seems xdai doesn't currently impose the contract size limit of 24576 bytes so we can enable 10000 optimizer runs
+making individual transaction executions cheaper. There's a chance xdai will introduce the limit in future in which
+case the current optimizer runs will need to be reduced. The current size of the UniswapV2Router02 is 26887 bytes.
