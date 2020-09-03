@@ -7,11 +7,11 @@ Requires checking out the Uniswap Periphery: https://github.com/1Hive/uniswap-v2
 $ yarn install
 ```
 
-2) Copy private key that contains xDAI into this repo and the the periphery repo's `truffle-config.js` where specified
+2) Copy private key that contains xDAI into this repo and the the periphery repo's `truffle-config.js` where specified.
 
 ### In the uniswap-v2-core repo
 
-3) Update the `FEE_TO_SETTER_ADDRESS` in the `migrations/2_deploy.js` file if required
+3) Update the `FEE_TO_SETTER_ADDRESS` in the `migrations/2_deploy.js` file if required.
 
 4) Deploy to xDAI:
 ```
@@ -25,11 +25,11 @@ $ npx truffle exec scripts/getUniswapV2PairBytecode.js
 
 ### In the uniswap-v2-periphery repo
 
-6) Copy the previously output `UniswapV2Factory` address to the `FACTORY_ADDRESS` in the `migrations/2_deploy.js` file
+6) Copy the previously output `UniswapV2Factory` address to the `FACTORY_ADDRESS` in the `migrations/2_deploy.js` file.
 
-7) Update the `WRAPPED_ETH` address in the `migrations/2_deploy.js` file if required
+7) Update the `WRAPPED_ETH` address in the `migrations/2_deploy.js` file if required.
 
-8) Copy the `init code hash` previously output to `contracts/libraries/UniswapV2Library.sol` at line 24
+8) Copy the `init code hash` previously output to `contracts/libraries/UniswapV2Library.sol` at line 24.
 
 9) Deploy to xDAI:
 ```
