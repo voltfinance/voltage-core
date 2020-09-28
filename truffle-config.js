@@ -57,6 +57,16 @@ module.exports = {
       gas: 10000000,
       gasPrice: 1000000000
     },
+    fuse: {
+      provider: function() {
+        return new HDWalletProvider(
+          [process.env.DEPLOYMENT_PRIVATE_KEY],
+          "https://rpc.fuse.io")
+      },
+      network_id: 122,
+      // gas: 10000000,
+      gasPrice: 1000000000
+    },
     // Another network with more advanced options...
     // advanced: {
     // port: 8777,             // Custom port
