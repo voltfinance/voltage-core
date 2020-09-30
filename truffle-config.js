@@ -50,7 +50,7 @@ module.exports = {
     xdai: {
       provider: function() {
         return new HDWalletProvider(
-          ["xDAI Account Private Key"],
+          [process.env.DEPLOYMENT_PRIVATE_KEY],
           "https://dai.poa.network")
       },
       network_id: 100,
