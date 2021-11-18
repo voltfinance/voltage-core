@@ -69,7 +69,7 @@ contract JoeToken is ERC20("JoeToken", "JOE"), Ownable {
      * @param rawAmount The number of tokens to transfer
      * @return Whether or not the transfer succeeded
      */
-    function transfer(address dst, uint rawAmount) public override returns (bool) {
+    function transfer(address dst, uint256 rawAmount) public override returns (bool) {
         super.transfer(dst, rawAmount);
         _moveDelegates(_delegates[msg.sender], _delegates[dst], rawAmount);
         return true;
@@ -82,7 +82,11 @@ contract JoeToken is ERC20("JoeToken", "JOE"), Ownable {
      * @param rawAmount The number of tokens to transfer
      * @return Whether or not the transfer succeeded
      */
-    function transferFrom(address src, address dst, uint rawAmount) public override returns (bool) {
+    function transferFrom(
+        address src,
+        address dst,
+        uint256 rawAmount
+    ) public override returns (bool) {
         super.transferFrom(src, dst, rawAmount);
         _moveDelegates(_delegates[src], _delegates[dst], rawAmount);
         return true;

@@ -70,16 +70,16 @@ describe("JoeToken", function () {
     await this.joe.mint(this.alice.address, "500000000000000000000000000")
   })
 
-  it('should not double spend delegation votes', async function () {
-    await this.joe.mint(this.alice.address, '100')
+  it("should not double spend delegation votes", async function () {
+    await this.joe.mint(this.alice.address, "100")
     await this.joe.delegate(this.bob.address)
 
-    await this.joe.transfer(this.carol.address, '100')
+    await this.joe.transfer(this.carol.address, "100")
     await this.joe.connect(this.carol).delegate(this.bob.address)
 
     const votes = await this.joe.getCurrentVotes(this.bob.address)
-    
-    expect(votes).to.equal('100') // bob should have 100 votes instead of 200
+
+    expect(votes).to.equal("100") // bob should have 100 votes instead of 200
   })
 
   after(async function () {
