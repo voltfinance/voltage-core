@@ -64,6 +64,31 @@ contract JoeToken is ERC20("JoeToken", "JOE"), Ownable {
     }
 
     /**
+     * @notice Transfer `rawAmount` tokens from `msg.sender` to `dst`
+     * @param dst The address of the destination account
+     * @param rawAmount The number of tokens to transfer
+     * @return Whether or not the transfer succeeded
+     */
+    function transfer(address dst, uint rawAmount) public override returns (bool) {
+        super.transfer(dst, rawAmount);
+        _moveDelegates(_delegates[msg.sender], _delegates[dst], rawAmount);
+        return true;
+    }
+
+    /**
+     * @notice Transfer `rawAmount` tokens from `src` to `dst`
+     * @param src The address of the source account
+     * @param dst The address of the destination account
+     * @param rawAmount The number of tokens to transfer
+     * @return Whether or not the transfer succeeded
+     */
+    function transferFrom(address src, address dst, uint rawAmount) public override returns (bool) {
+        super.transferFrom(src, dst, rawAmount);
+        _moveDelegates(_delegates[src], _delegates[dst], rawAmount);
+        return true;
+    }
+
+    /**
      * @notice Delegate votes from `msg.sender` to `delegatee`
      * @param delegatee The address to delegate votes to
      */
