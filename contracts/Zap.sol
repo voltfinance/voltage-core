@@ -11,9 +11,9 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import "./traderjoe/interfaces/IJoePair.sol";
-import "./traderjoe/interfaces/IJoeRouter02.sol";
-import "./traderjoe/interfaces/IWAVAX.sol";
+import "./fusefi/interfaces/IFuseFiPair.sol";
+import "./fusefi/interfaces/IFuseFiRouter02.sol";
+import "./fusefi/interfaces/IWFUSE.sol";
 
 contract Zap is OwnableUpgradeable {
     using SafeMath for uint256;
@@ -26,7 +26,7 @@ contract Zap is OwnableUpgradeable {
     address public constant DAI = 0xbA7dEebBFC5fA1100Fb055a87773e1E99Cd3507a;
     address public constant WAVAX = 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7;
 
-    IJoeRouter02 private ROUTER;
+    IFuseFiRouter02 private ROUTER;
 
     /* ========== STATE VARIABLES ========== */
 
@@ -41,7 +41,7 @@ contract Zap is OwnableUpgradeable {
         require(owner() != address(0), "ZapETH: owner must be set");
 
         JOE = _joe;
-        ROUTER = IJoeRouter02(_router);
+        ROUTER = IFuseFiRouter02(_router);
         setNotLP(WAVAX);
         setNotLP(USDT);
         setNotLP(JOE);
@@ -71,7 +71,7 @@ contract Zap is OwnableUpgradeable {
         _approveTokenIfNeeded(_from);
 
         if (isLP(_to)) {
-            IJoePair pair = IJoePair(_to);
+            IFuseFiPair pair = IFuseFiPair(_to);
             address token0 = pair.token0();
             address token1 = pair.token1();
             if (_from == token0 || _from == token1) {
@@ -110,11 +110,11 @@ contract Zap is OwnableUpgradeable {
         if (!isLP(_from)) {
             _swapTokenForAVAX(_from, amount, msg.sender);
         } else {
-            IJoePair pair = IJoePair(_from);
+            IFuseFiPair pair = IFuseFiPair(_from);
             address token0 = pair.token0();
             address token1 = pair.token1();
             if (token0 == WAVAX || token1 == WAVAX) {
-                ROUTER.removeLiquidityAVAX(
+                ROUTER.removeLiquidityFUSE(
                     token0 != WAVAX ? token0 : token1,
                     amount,
                     0,
@@ -145,7 +145,7 @@ contract Zap is OwnableUpgradeable {
             _swapAVAXForToken(lp, amount, receiver);
         } else {
             // lp
-            IJoePair pair = IJoePair(lp);
+            IFuseFiPair pair = IFuseFiPair(lp);
             address token0 = pair.token0();
             address token1 = pair.token1();
             if (token0 == WAVAX || token1 == WAVAX) {
@@ -154,7 +154,7 @@ contract Zap is OwnableUpgradeable {
                 uint256 tokenAmount = _swapAVAXForToken(token, swapValue, address(this));
 
                 _approveTokenIfNeeded(token);
-                ROUTER.addLiquidityAVAX{value: amount.sub(swapValue)}(
+                ROUTER.addLiquidityFUSE{value: amount.sub(swapValue)}(
                     token,
                     tokenAmount,
                     0,
@@ -192,7 +192,7 @@ contract Zap is OwnableUpgradeable {
             path[1] = token;
         }
 
-        uint256[] memory amounts = ROUTER.swapExactAVAXForTokens{value: value}(0, path, receiver, block.timestamp);
+        uint256[] memory amounts = ROUTER.swapExactFUSEForTokens{value: value}(0, path, receiver, block.timestamp);
         return amounts[amounts.length - 1];
     }
 
@@ -213,7 +213,7 @@ contract Zap is OwnableUpgradeable {
             path[1] = WAVAX;
         }
 
-        uint256[] memory amounts = ROUTER.swapExactTokensForAVAX(amount, 0, path, receiver, block.timestamp);
+        uint256[] memory amounts = ROUTER.swapExactTokensForFUSE(amount, 0, path, receiver, block.timestamp);
         return amounts[amounts.length - 1];
     }
 
@@ -318,7 +318,7 @@ contract Zap is OwnableUpgradeable {
             uint256 amount = IERC20(token).balanceOf(address(this));
             if (amount > 0) {
                 if (token == WAVAX) {
-                    IWAVAX(token).withdraw(amount);
+                    IWFUSE(token).withdraw(amount);
                 } else {
                     _swapTokenForAVAX(token, amount, owner());
                 }

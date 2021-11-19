@@ -5,15 +5,15 @@ import "../libraries/SafeMath.sol";
 import "../libraries/SafeERC20.sol";
 
 import "../interfaces/IERC20.sol";
-import "./interfaces/IJoeERC20.sol";
-import "./interfaces/IJoePair.sol";
-import "./interfaces/IJoeFactory.sol";
+import "./interfaces/IFuseFiERC20.sol";
+import "./interfaces/IFuseFiPair.sol";
+import "./interfaces/IFuseFiFactory.sol";
 
 import "../boringcrypto/BoringOwnable.sol";
 
 interface IMasterChef {
     struct PoolInfo {
-        IJoeERC20 lpToken; // Address of LP token contract.
+        IFuseFiERC20 lpToken; // Address of LP token contract.
         uint256 allocPoint; // How many allocation points assigned to this pool. JOE to distribute per block.
         uint256 lastRewardTimestamp; // Last block number that JOE distribution occurs.
         uint256 accJoePerShare; // Accumulated JOE per share, times 1e12. See below.
@@ -36,7 +36,7 @@ contract FarmLens is BoringOwnable {
     address public wavaxUsdt; // 0xeD8CBD9F0cE3C6986b22002F03c6475CEb7a6256
     address public wavaxUsdc; // 0x87Dee1cC9FFd464B79e058ba20387c1984aed86a
     address public wavaxDai; // 0xA389f9430876455C36478DeEa9769B7Ca4E3DDB1
-    IJoeFactory public joeFactory; // IJoeFactory(0x9Ad6C38BE94206cA50bb0d90783181662f0Cfa10);
+    IFuseFiFactory public fuseFiFactory; // IJoeFactory(0x9Ad6C38BE94206cA50bb0d90783181662f0Cfa10);
     IMasterChef public chefv2; //0xd6a4F121CA35509aF06A0Be99093d08462f53052
     IMasterChef public chefv3; //0x188bED1968b795d5c9022F6a0bb5931Ac4c18F00
 
@@ -46,7 +46,7 @@ contract FarmLens is BoringOwnable {
         address wavaxUsdt_,
         address wavaxUsdc_,
         address wavaxDai_,
-        IJoeFactory joeFactory_,
+        IFuseFiFactory fuseFiFactory_,
         IMasterChef chefv2_,
         IMasterChef chefv3_
     ) public {
@@ -55,16 +55,16 @@ contract FarmLens is BoringOwnable {
         wavaxUsdt = wavaxUsdt_;
         wavaxUsdc = wavaxUsdc_;
         wavaxDai = wavaxDai_;
-        joeFactory = IJoeFactory(joeFactory_);
+        fuseFiFactory = IFuseFiFactory(fuseFiFactory_);
         chefv2 = chefv2_;
         chefv3 = chefv3_;
     }
 
     /// @notice Returns price of avax in usd.
     function getAvaxPrice() public view returns (uint256) {
-        uint256 priceFromWavaxUsdt = _getAvaxPrice(IJoePair(wavaxUsdt)); // 18
-        uint256 priceFromWavaxUsdc = _getAvaxPrice(IJoePair(wavaxUsdc)); // 18
-        uint256 priceFromWavaxDai = _getAvaxPrice(IJoePair(wavaxDai)); // 18
+        uint256 priceFromWavaxUsdt = _getAvaxPrice(IFuseFiPair(wavaxUsdt)); // 18
+        uint256 priceFromWavaxUsdc = _getAvaxPrice(IFuseFiPair(wavaxUsdc)); // 18
+        uint256 priceFromWavaxDai = _getAvaxPrice(IFuseFiPair(wavaxDai)); // 18
 
         uint256 sumPrice = priceFromWavaxUsdt.add(priceFromWavaxUsdc).add(priceFromWavaxDai); // 18
         uint256 avaxPrice = sumPrice / 3; // 18
@@ -73,7 +73,7 @@ contract FarmLens is BoringOwnable {
 
     /// @notice Returns value of wavax in units of stablecoins per wavax.
     /// @param pair A wavax-stablecoin pair.
-    function _getAvaxPrice(IJoePair pair) private view returns (uint256) {
+    function _getAvaxPrice(IFuseFiPair pair) private view returns (uint256) {
         (uint256 reserve0, uint256 reserve1, ) = pair.getReserves();
 
         if (pair.token0() == wavax) {
@@ -99,7 +99,7 @@ contract FarmLens is BoringOwnable {
             return 1e18;
         }
 
-        IJoePair pair = IJoePair(joeFactory.getPair(tokenAddress, wavax));
+        IFuseFiPair pair = IFuseFiPair(fuseFiFactory.getPair(tokenAddress, wavax));
 
         (uint256 reserve0, uint256 reserve1, ) = pair.getReserves();
         address token0Address = pair.token0();
@@ -117,13 +117,13 @@ contract FarmLens is BoringOwnable {
     /// @notice Calculates the multiplier needed to scale a token's numerical field to 18 decimals.
     /// @param tokenAddress Address of the token.
     function _tokenDecimalsMultiplier(address tokenAddress) private pure returns (uint256) {
-        uint256 decimalsNeeded = 18 - IJoeERC20(tokenAddress).decimals();
+        uint256 decimalsNeeded = 18 - IFuseFiERC20(tokenAddress).decimals();
         return 1 * (10**decimalsNeeded);
     }
 
     /// @notice Calculates the reserve of a pair in usd.
     /// @param pair Pair for which the reserve will be calculated.
-    function getReserveUsd(IJoePair pair) public view returns (uint256) {
+    function getReserveUsd(IFuseFiPair pair) public view returns (uint256) {
         address token0Address = pair.token0();
         address token1Address = pair.token1();
 
@@ -173,7 +173,7 @@ contract FarmLens is BoringOwnable {
 
         for (uint256 i = 0; i < whitelistLength; i++) {
             IMasterChef.PoolInfo memory pool = chef.poolInfo(whitelistedPids[i]);
-            IJoePair lpToken = IJoePair(address(pool.lpToken));
+            IFuseFiPair lpToken = IFuseFiPair(address(pool.lpToken));
 
             //get pool information
             farmPairs[i].id = whitelistedPids[i];
@@ -186,8 +186,8 @@ contract FarmLens is BoringOwnable {
             farmPairs[i].lpAddress = lpAddress;
             farmPairs[i].token0Address = token0Address;
             farmPairs[i].token1Address = token1Address;
-            farmPairs[i].token0Symbol = IJoeERC20(token0Address).symbol();
-            farmPairs[i].token1Symbol = IJoeERC20(token1Address).symbol();
+            farmPairs[i].token0Symbol = IFuseFiERC20(token0Address).symbol();
+            farmPairs[i].token1Symbol = IFuseFiERC20(token1Address).symbol();
 
             // calculate reserveUsd of lp
             farmPairs[i].reserveUsd = getReserveUsd(lpToken); // 18

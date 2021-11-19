@@ -35,8 +35,8 @@ library TransferHelper {
         require(success && (data.length == 0 || abi.decode(data, (bool))), "TransferHelper: TRANSFER_FROM_FAILED");
     }
 
-    function safeTransferAVAX(address to, uint256 value) internal {
+    function safeTransferFUSE(address to, uint256 value) internal {
         (bool success, ) = to.call{value: value}(new bytes(0));
-        require(success, "TransferHelper: AVAX_TRANSFER_FAILED");
+        require(success, "TransferHelper: FUSE_TRANSFER_FAILED");
     }
 }

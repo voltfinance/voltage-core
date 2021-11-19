@@ -2,10 +2,10 @@
 
 pragma solidity >=0.6.2;
 
-interface IJoeRouter01 {
+interface IFuseFiRouter01 {
     function factory() external pure returns (address);
 
-    function WAVAX() external pure returns (address);
+    function WFUSE() external pure returns (address);
 
     function addLiquidity(
         address tokenA,
@@ -24,11 +24,11 @@ interface IJoeRouter01 {
             uint256 liquidity
         );
 
-    function addLiquidityAVAX(
+    function addLiquidityFUSE(
         address token,
         uint256 amountTokenDesired,
         uint256 amountTokenMin,
-        uint256 amountAVAXMin,
+        uint256 amountFUSEMin,
         address to,
         uint256 deadline
     )
@@ -36,7 +36,7 @@ interface IJoeRouter01 {
         payable
         returns (
             uint256 amountToken,
-            uint256 amountAVAX,
+            uint256 amountFUSE,
             uint256 liquidity
         );
 
@@ -50,14 +50,14 @@ interface IJoeRouter01 {
         uint256 deadline
     ) external returns (uint256 amountA, uint256 amountB);
 
-    function removeLiquidityAVAX(
+    function removeLiquidityFUSE(
         address token,
         uint256 liquidity,
         uint256 amountTokenMin,
-        uint256 amountAVAXMin,
+        uint256 amountFUSEMin,
         address to,
         uint256 deadline
-    ) external returns (uint256 amountToken, uint256 amountAVAX);
+    ) external returns (uint256 amountToken, uint256 amountFUSE);
 
     function removeLiquidityWithPermit(
         address tokenA,
@@ -73,18 +73,18 @@ interface IJoeRouter01 {
         bytes32 s
     ) external returns (uint256 amountA, uint256 amountB);
 
-    function removeLiquidityAVAXWithPermit(
+    function removeLiquidityFUSEWithPermit(
         address token,
         uint256 liquidity,
         uint256 amountTokenMin,
-        uint256 amountAVAXMin,
+        uint256 amountFUSEMin,
         address to,
         uint256 deadline,
         bool approveMax,
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) external returns (uint256 amountToken, uint256 amountAVAX);
+    ) external returns (uint256 amountToken, uint256 amountFUSE);
 
     function swapExactTokensForTokens(
         uint256 amountIn,
@@ -102,14 +102,14 @@ interface IJoeRouter01 {
         uint256 deadline
     ) external returns (uint256[] memory amounts);
 
-    function swapExactAVAXForTokens(
+    function swapExactFUSEForTokens(
         uint256 amountOutMin,
         address[] calldata path,
         address to,
         uint256 deadline
     ) external payable returns (uint256[] memory amounts);
 
-    function swapTokensForExactAVAX(
+    function swapTokensForExactFUSE(
         uint256 amountOut,
         uint256 amountInMax,
         address[] calldata path,
@@ -117,7 +117,7 @@ interface IJoeRouter01 {
         uint256 deadline
     ) external returns (uint256[] memory amounts);
 
-    function swapExactTokensForAVAX(
+    function swapExactTokensForFUSE(
         uint256 amountIn,
         uint256 amountOutMin,
         address[] calldata path,
@@ -125,7 +125,7 @@ interface IJoeRouter01 {
         uint256 deadline
     ) external returns (uint256[] memory amounts);
 
-    function swapAVAXForExactTokens(
+    function swapFUSEForExactTokens(
         uint256 amountOut,
         address[] calldata path,
         address to,

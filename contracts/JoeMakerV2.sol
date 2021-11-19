@@ -6,10 +6,10 @@ pragma solidity 0.6.12;
 import "./libraries/SafeMath.sol";
 import "./libraries/SafeERC20.sol";
 
-import "./traderjoe/interfaces/IERC20.sol";
-import "./traderjoe/interfaces/IJoeERC20.sol";
-import "./traderjoe/interfaces/IJoePair.sol";
-import "./traderjoe/interfaces/IJoeFactory.sol";
+import "./fusefi/interfaces/IERC20.sol";
+import "./fusefi/interfaces/IFuseFiERC20.sol";
+import "./fusefi/interfaces/IFuseFiPair.sol";
+import "./fusefi/interfaces/IFuseFiFactory.sol";
 
 import "./boringcrypto/BoringOwnable.sol";
 
@@ -23,7 +23,7 @@ contract JoeMakerV2 is BoringOwnable {
 
     /* ========== CONSTANT VARIABLES ========== */
 
-    IJoeFactory public immutable factory;
+    IFuseFiFactory public immutable factory;
     address public immutable bar;
     address private immutable joe;
     address private immutable wavax;
@@ -49,7 +49,7 @@ contract JoeMakerV2 is BoringOwnable {
         address _joe,
         address _wavax
     ) public {
-        factory = IJoeFactory(_factory);
+        factory = IFuseFiFactory(_factory);
         bar = _bar;
         joe = _joe;
         wavax = _wavax;
@@ -96,7 +96,7 @@ contract JoeMakerV2 is BoringOwnable {
     function _convert(address token0, address token1) internal {
         // Interactions
         // S1 - S4: OK
-        IJoePair pair = IJoePair(factory.getPair(token0, token1));
+        IFuseFiPair pair = IFuseFiPair(factory.getPair(token0, token1));
         require(address(pair) != address(0), "JoeMakerV2: Invalid pair");
         // balanceOf: S1 - S4: OK
         // transfer: X1 - X5: OK
@@ -175,7 +175,7 @@ contract JoeMakerV2 is BoringOwnable {
     ) internal returns (uint256 realAmountOut) {
         // Checks
         // X1 - X5: OK
-        IJoePair pair = IJoePair(factory.getPair(fromToken, toToken));
+        IFuseFiPair pair = IFuseFiPair(factory.getPair(fromToken, toToken));
         require(address(pair) != address(0), "JoeMakerV2: Cannot convert");
 
         // Interactions
