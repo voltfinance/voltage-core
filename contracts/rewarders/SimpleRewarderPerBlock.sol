@@ -10,14 +10,14 @@ import "../libraries/SafeERC20.sol";
 interface IRewarder {
     using SafeERC20 for IERC20;
 
-    function onJoeReward(address user, uint256 newLpAmount) external;
+    function onVoltReward(address user, uint256 newLpAmount) external;
 
     function pendingTokens(address user) external view returns (uint256 pending);
 
     function rewardToken() external view returns (IERC20);
 }
 
-interface IMasterChefJoeV2 {
+interface IMasterChefFuseFiV2 {
     using SafeERC20 for IERC20;
 
     struct UserInfo {
@@ -29,7 +29,7 @@ interface IMasterChefJoeV2 {
         IERC20 lpToken; // Address of LP token contract.
         uint256 allocPoint; // How many allocation points assigned to this poolInfo. SUSHI to distribute per block.
         uint256 lastRewardTimestamp; // Last block timestamp that SUSHI distribution occurs.
-        uint256 accJoePerShare; // Accumulated SUSHI per share, times 1e12. See below.
+        uint256 accVoltPerShare; // Accumulated SUSHI per share, times 1e12. See below.
     }
 
     function poolInfo(uint256 pid) external view returns (PoolInfo memory);
@@ -40,11 +40,11 @@ interface IMasterChefJoeV2 {
 }
 
 /**
- * This is a sample contract to be used in the MasterChefJoeV2 contract for partners to reward
- * stakers with their native token alongside JOE.
+ * This is a sample contract to be used in the MasterChefFuseFiV2 contract for partners to reward
+ * stakers with their native token alongside VOLT.
  *
  * It assumes no minting rights, so requires a set amount of YOUR_TOKEN to be transferred to this contract prior.
- * E.g. say you've allocated 100,000 XYZ to the JOE-XYZ farm over 30 days. Then you would need to transfer
+ * E.g. say you've allocated 100,000 XYZ to the VOLT-XYZ farm over 30 days. Then you would need to transfer
  * 100,000 XYZ and set the block reward accordingly so it's fully distributed after 30 days.
  *
  */
@@ -54,7 +54,7 @@ contract SimpleRewarderPerBlock is IRewarder, BoringOwnable {
 
     IERC20 public immutable override rewardToken;
     IERC20 public immutable lpToken;
-    IMasterChefJoeV2 public immutable MC_V2;
+    IMasterChefFuseFiV2 public immutable MC_V2;
 
     /// @notice Info of each MCV2 user.
     /// `amount` LP token amount the user has provided.
@@ -92,11 +92,11 @@ contract SimpleRewarderPerBlock is IRewarder, BoringOwnable {
         IERC20 _rewardToken,
         IERC20 _lpToken,
         uint256 _tokenPerBlock,
-        IMasterChefJoeV2 _MCV2
+        IMasterChefFuseFiV2 _MCV2
     ) public {
         require(Address.isContract(address(_rewardToken)), "constructor: reward token must be a valid contract");
         require(Address.isContract(address(_lpToken)), "constructor: LP token must be a valid contract");
-        require(Address.isContract(address(_MCV2)), "constructor: MasterChefJoeV2 must be a valid contract");
+        require(Address.isContract(address(_MCV2)), "constructor: MasterChefFuseFiV2 must be a valid contract");
 
         rewardToken = _rewardToken;
         lpToken = _lpToken;
@@ -135,10 +135,10 @@ contract SimpleRewarderPerBlock is IRewarder, BoringOwnable {
         emit RewardRateUpdated(oldRate, _tokenPerBlock);
     }
 
-    /// @notice Function called by MasterChefJoeV2 whenever staker claims JOE harvest. Allows staker to also receive a 2nd reward token.
+    /// @notice Function called by MasterChefFuseFiV2 whenever staker claims VOLT harvest. Allows staker to also receive a 2nd reward token.
     /// @param _user Address of user
     /// @param _lpAmount Number of LP tokens the user has
-    function onJoeReward(address _user, uint256 _lpAmount) external override onlyMCV2 {
+    function onVoltReward(address _user, uint256 _lpAmount) external override onlyMCV2 {
         updatePool();
         PoolInfo memory pool = poolInfo;
         UserInfo storage user = userInfo[_user];

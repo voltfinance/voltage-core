@@ -10,7 +10,7 @@ import "../libraries/SafeERC20.sol";
 interface IRewarder {
     using SafeERC20 for IERC20;
 
-    function onJoeReward(address user, uint256 newLpAmount) external;
+    function onVoltReward(address user, uint256 newLpAmount) external;
 
     function pendingTokens(address user) external view returns (uint256 pending);
 
@@ -19,7 +19,7 @@ interface IRewarder {
 
 interface IMasterChef {
     struct PoolInfo {
-        uint256 allocPoint; // How many allocation points assigned to this pool. JOE to distribute per block.
+        uint256 allocPoint; // How many allocation points assigned to this pool. VOLT to distribute per block.
     }
 
     function deposit(uint256 _pid, uint256 _amount) external;
@@ -29,7 +29,7 @@ interface IMasterChef {
     function totalAllocPoint() external view returns (uint256);
 }
 
-interface IMasterChefJoeV2 {
+interface IMasterChefFuseFiV2 {
     using SafeERC20 for IERC20;
 
     struct UserInfo {
@@ -39,9 +39,9 @@ interface IMasterChefJoeV2 {
 
     struct PoolInfo {
         IERC20 lpToken; // Address of LP token contract.
-        uint256 allocPoint; // How many allocation points assigned to this poolInfo. SUSHI to distribute per block.
-        uint256 lastRewardTimestamp; // Last block.timestamp that SUSHI distribution occurs.
-        uint256 accJoePerShare; // Accumulated SUSHI per share, times 1e12. See below.
+        uint256 allocPoint; // How many allocation points assigned to this poolInfo. VOLT to distribute per block.
+        uint256 lastRewardTimestamp; // Last block.timestamp that VOLT distribution occurs.
+        uint256 accVoltPerShare; // Accumulated VOLT per share, times 1e12. See below.
     }
 
     function poolInfo(uint256 pid) external view returns (PoolInfo memory);
@@ -52,14 +52,14 @@ interface IMasterChefJoeV2 {
 }
 
 /**
- * This is a sample contract to be used in the MasterChefJoeV2 contract for partners to reward
- * stakers with their native token alongside JOE.
+ * This is a sample contract to be used in the MasterChefFuseFiV2 contract for partners to reward
+ * stakers with their native token alongside VOLT.
  *
  * It assumes the project already has an existing MasterChef-style farm contract.
  * In which case, the init() function is called to deposit a dummy token into one
  * of the MasterChef farms so this contract can accrue rewards from that farm.
  * The contract then transfers the reward token to the user on each call to
- * onJoeReward().
+ * onVoltReward().
  *
  */
 contract MasterChefRewarderPerSec is IRewarder, Ownable {
@@ -70,7 +70,7 @@ contract MasterChefRewarderPerSec is IRewarder, Ownable {
     IERC20 public immutable lpToken;
     uint256 public immutable MCV1_pid;
     IMasterChef public immutable MCV1;
-    IMasterChefJoeV2 public immutable MCV2;
+    IMasterChefFuseFiV2 public immutable MCV2;
 
     /// @notice Info of each MCV2 user.
     /// `amount` LP token amount the user has provided.
@@ -113,12 +113,12 @@ contract MasterChefRewarderPerSec is IRewarder, Ownable {
         uint256 _allocPoint,
         uint256 _MCV1_pid,
         IMasterChef _MCV1,
-        IMasterChefJoeV2 _MCV2
+        IMasterChefFuseFiV2 _MCV2
     ) public {
         require(Address.isContract(address(_rewardToken)), "constructor: reward token must be a valid contract");
         require(Address.isContract(address(_lpToken)), "constructor: LP token must be a valid contract");
         require(Address.isContract(address(_MCV1)), "constructor: MasterChef must be a valid contract");
-        require(Address.isContract(address(_MCV2)), "constructor: MasterChefJoeV2 must be a valid contract");
+        require(Address.isContract(address(_MCV2)), "constructor: MasterChefFuseFiV2 must be a valid contract");
 
         rewardToken = _rewardToken;
         lpToken = _lpToken;
@@ -188,7 +188,7 @@ contract MasterChefRewarderPerSec is IRewarder, Ownable {
     /// @notice Function called by MasterChefJoeV2 whenever staker claims JOE harvest. Allows staker to also receive a 2nd reward token.
     /// @param _user Address of user
     /// @param _lpAmount Number of LP tokens the user has
-    function onJoeReward(address _user, uint256 _lpAmount) external override onlyMCV2 {
+    function onVoltReward(address _user, uint256 _lpAmount) external override onlyMCV2 {
         updatePool();
         PoolInfo memory pool = poolInfo;
         UserInfo storage user = userInfo[_user];

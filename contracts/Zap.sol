@@ -11,9 +11,9 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import "./fusefi/interfaces/IFuseFiPair.sol";
-import "./fusefi/interfaces/IFuseFiRouter02.sol";
-import "./fusefi/interfaces/IWFUSE.sol";
+import "./uniswap/interfaces/IUniswapV2Pair.sol";
+import "./uniswap/interfaces/IUniswapV2Router02.sol";
+import "./uniswap/interfaces/IWETH.sol";
 
 contract Zap is OwnableUpgradeable {
     using SafeMath for uint256;
@@ -21,12 +21,12 @@ contract Zap is OwnableUpgradeable {
 
     /* ========== CONSTANT VARIABLES ========== */
 
-    address public JOE;
+    address public VOLT;
     address public constant USDT = 0xde3A24028580884448a5397872046a019649b084;
     address public constant DAI = 0xbA7dEebBFC5fA1100Fb055a87773e1E99Cd3507a;
-    address public constant WAVAX = 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7;
+    address public constant WETH = 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7;
 
-    IFuseFiRouter02 private ROUTER;
+    IUniswapV2Router02 private ROUTER;
 
     /* ========== STATE VARIABLES ========== */
 
@@ -36,15 +36,15 @@ contract Zap is OwnableUpgradeable {
 
     /* ========== INITIALIZER ========== */
 
-    function initialize(address _joe, address _router) external initializer {
+    function initialize(address _volt, address _router) external initializer {
         __Ownable_init();
         require(owner() != address(0), "ZapETH: owner must be set");
 
-        JOE = _joe;
-        ROUTER = IFuseFiRouter02(_router);
-        setNotLP(WAVAX);
+        VOLT = _volt;
+        ROUTER = IUniswapV2Router02(_router);
+        setNotLP(WETH);
         setNotLP(USDT);
-        setNotLP(JOE);
+        setNotLP(VOLT);
         setNotLP(DAI);
     }
 
@@ -71,7 +71,7 @@ contract Zap is OwnableUpgradeable {
         _approveTokenIfNeeded(_from);
 
         if (isLP(_to)) {
-            IFuseFiPair pair = IFuseFiPair(_to);
+            IUniswapV2Pair pair = IUniswapV2Pair(_to);
             address token0 = pair.token0();
             address token1 = pair.token1();
             if (_from == token0 || _from == token1) {
@@ -91,8 +91,8 @@ contract Zap is OwnableUpgradeable {
                     block.timestamp
                 );
             } else {
-                uint256 avaxAmount = _swapTokenForAVAX(_from, amount, address(this));
-                _swapAVAXToLP(_to, avaxAmount, msg.sender);
+                uint256 ethAmount = _swapTokenForETH(_from, amount, address(this));
+                _swapETHToLP(_to, ethAmount, msg.sender);
             }
         } else {
             _swap(_from, amount, _to, msg.sender);
@@ -100,7 +100,7 @@ contract Zap is OwnableUpgradeable {
     }
 
     function zapIn(address _to) external payable {
-        _swapAVAXToLP(_to, msg.value, msg.sender);
+        _swapETHToLP(_to, msg.value, msg.sender);
     }
 
     function zapOut(address _from, uint256 amount) external {
@@ -108,14 +108,14 @@ contract Zap is OwnableUpgradeable {
         _approveTokenIfNeeded(_from);
 
         if (!isLP(_from)) {
-            _swapTokenForAVAX(_from, amount, msg.sender);
+            _swapTokenForETH(_from, amount, msg.sender);
         } else {
-            IFuseFiPair pair = IFuseFiPair(_from);
+            IUniswapV2Pair pair = IUniswapV2Pair(_from);
             address token0 = pair.token0();
             address token1 = pair.token1();
-            if (token0 == WAVAX || token1 == WAVAX) {
-                ROUTER.removeLiquidityFUSE(
-                    token0 != WAVAX ? token0 : token1,
+            if (token0 == WETH || token1 == WETH) {
+                ROUTER.removeLiquidityETH(
+                    token0 != WETH ? token0 : token1,
                     amount,
                     0,
                     0,
@@ -136,25 +136,25 @@ contract Zap is OwnableUpgradeable {
         }
     }
 
-    function _swapAVAXToLP(
+    function _swapETHToLP(
         address lp,
         uint256 amount,
         address receiver
     ) private {
         if (!isLP(lp)) {
-            _swapAVAXForToken(lp, amount, receiver);
+            _swapETHForToken(lp, amount, receiver);
         } else {
             // lp
-            IFuseFiPair pair = IFuseFiPair(lp);
+            IUniswapV2Pair pair = IUniswapV2Pair(lp);
             address token0 = pair.token0();
             address token1 = pair.token1();
-            if (token0 == WAVAX || token1 == WAVAX) {
-                address token = token0 == WAVAX ? token1 : token0;
+            if (token0 == WETH || token1 == WETH) {
+                address token = token0 == WETH ? token1 : token0;
                 uint256 swapValue = amount.div(2);
-                uint256 tokenAmount = _swapAVAXForToken(token, swapValue, address(this));
+                uint256 tokenAmount = _swapETHForToken(token, swapValue, address(this));
 
                 _approveTokenIfNeeded(token);
-                ROUTER.addLiquidityFUSE{value: amount.sub(swapValue)}(
+                ROUTER.addLiquidityETH{value: amount.sub(swapValue)}(
                     token,
                     tokenAmount,
                     0,
@@ -164,8 +164,8 @@ contract Zap is OwnableUpgradeable {
                 );
             } else {
                 uint256 swapValue = amount.div(2);
-                uint256 token0Amount = _swapAVAXForToken(token0, swapValue, address(this));
-                uint256 token1Amount = _swapAVAXForToken(token1, amount.sub(swapValue), address(this));
+                uint256 token0Amount = _swapETHForToken(token0, swapValue, address(this));
+                uint256 token1Amount = _swapETHForToken(token1, amount.sub(swapValue), address(this));
 
                 _approveTokenIfNeeded(token0);
                 _approveTokenIfNeeded(token1);
@@ -174,7 +174,7 @@ contract Zap is OwnableUpgradeable {
         }
     }
 
-    function _swapAVAXForToken(
+    function _swapETHForToken(
         address token,
         uint256 value,
         address receiver
@@ -183,20 +183,20 @@ contract Zap is OwnableUpgradeable {
 
         if (routePairAddresses[token] != address(0)) {
             path = new address[](3);
-            path[0] = WAVAX;
+            path[0] = WETH;
             path[1] = routePairAddresses[token];
             path[2] = token;
         } else {
             path = new address[](2);
-            path[0] = WAVAX;
+            path[0] = WETH;
             path[1] = token;
         }
 
-        uint256[] memory amounts = ROUTER.swapExactFUSEForTokens{value: value}(0, path, receiver, block.timestamp);
+        uint256[] memory amounts = ROUTER.swapExactETHForTokens{value: value}(0, path, receiver, block.timestamp);
         return amounts[amounts.length - 1];
     }
 
-    function _swapTokenForAVAX(
+    function _swapTokenForETH(
         address token,
         uint256 amount,
         address receiver
@@ -206,14 +206,14 @@ contract Zap is OwnableUpgradeable {
             path = new address[](3);
             path[0] = token;
             path[1] = routePairAddresses[token];
-            path[2] = WAVAX;
+            path[2] = WETH;
         } else {
             path = new address[](2);
             path[0] = token;
-            path[1] = WAVAX;
+            path[1] = WETH;
         }
 
-        uint256[] memory amounts = ROUTER.swapExactTokensForFUSE(amount, 0, path, receiver, block.timestamp);
+        uint256[] memory amounts = ROUTER.swapExactTokensForETH(amount, 0, path, receiver, block.timestamp);
         return amounts[amounts.length - 1];
     }
 
@@ -229,7 +229,7 @@ contract Zap is OwnableUpgradeable {
         }
 
         address[] memory path;
-        if (intermediate != address(0) && (_from == WAVAX || _to == WAVAX)) {
+        if (intermediate != address(0) && (_from == WETH || _to == WETH)) {
             // [WAVAX, BUSD, VAI] or [VAI, BUSD, WAVAX]
             path = new address[](3);
             path[0] = _from;
@@ -256,7 +256,7 @@ contract Zap is OwnableUpgradeable {
             path = new address[](5);
             path[0] = _from;
             path[1] = routePairAddresses[_from];
-            path[2] = WAVAX;
+            path[2] = WETH;
             path[3] = routePairAddresses[_to];
             path[4] = _to;
         } else if (intermediate != address(0) && routePairAddresses[_from] != address(0)) {
@@ -264,16 +264,16 @@ contract Zap is OwnableUpgradeable {
             path = new address[](4);
             path[0] = _from;
             path[1] = intermediate;
-            path[2] = WAVAX;
+            path[2] = WETH;
             path[3] = _to;
         } else if (intermediate != address(0) && routePairAddresses[_to] != address(0)) {
             // [BUNNY, WAVAX, BUSD, VAI]
             path = new address[](4);
             path[0] = _from;
-            path[1] = WAVAX;
+            path[1] = WETH;
             path[2] = intermediate;
             path[3] = _to;
-        } else if (_from == WAVAX || _to == WAVAX) {
+        } else if (_from == WETH || _to == WETH) {
             // [WAVAX, BUNNY] or [BUNNY, WAVAX]
             path = new address[](2);
             path[0] = _from;
@@ -282,7 +282,7 @@ contract Zap is OwnableUpgradeable {
             // [USDT, BUNNY] or [BUNNY, USDT]
             path = new address[](3);
             path[0] = _from;
-            path[1] = WAVAX;
+            path[1] = WETH;
             path[2] = _to;
         }
 
@@ -317,10 +317,10 @@ contract Zap is OwnableUpgradeable {
             if (token == address(0)) continue;
             uint256 amount = IERC20(token).balanceOf(address(this));
             if (amount > 0) {
-                if (token == WAVAX) {
-                    IWFUSE(token).withdraw(amount);
+                if (token == WETH) {
+                    IWETH(token).withdraw(amount);
                 } else {
-                    _swapTokenForAVAX(token, amount, owner());
+                    _swapTokenForETH(token, amount, owner());
                 }
             }
         }
