@@ -1,28 +1,15 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity 0.6.12;
-pragma experimental ABIEncoderV2;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./VoltToken.sol";
-import "./libraries/BoringERC20.sol";
-import "hardhat/console.sol";
 
-interface IRewarder {
-    using SafeERC20 for IERC20;
-
-    function onVoltReward(address user, uint256 newLpAmount) external;
-
-    function pendingTokens(address user) external view returns (uint256 pending);
-
-    function rewardToken() external view returns (address);
-}
-
-// MasterChefFuseFi is a boss. He says "go f your blocks lego boy, I'm gonna use timestamp instead".
+// MasterChefVolt is a boss. He says "go f your blocks lego boy, I'm gonna use timestamp instead".
 // And to top it off, it takes no risks. Because the biggest risk is operator error.
 // So we make it virtually impossible for the operator of this contract to cause a bug with people's harvests.
 //
@@ -33,10 +20,9 @@ interface IRewarder {
 // With thanks to the Lydia Finance team.
 //
 // Godspeed and may the 10x be with you.
-contract MasterChefFuseFiV2 is Ownable {
+contract MasterChefVolt is Ownable {
     using SafeMath for uint256;
-    using BoringERC20 for IERC20;
-    using EnumerableSet for EnumerableSet.AddressSet;
+    using SafeERC20 for IERC20;
 
     // Info of each user.
     struct UserInfo {
@@ -61,72 +47,59 @@ contract MasterChefFuseFiV2 is Ownable {
         uint256 allocPoint; // How many allocation points assigned to this pool. VOLTs to distribute per second.
         uint256 lastRewardTimestamp; // Last timestamp that VOLTs distribution occurs.
         uint256 accVoltPerShare; // Accumulated VOLTs per share, times 1e12. See below.
-        IRewarder rewarder;
     }
 
     // The VOLT TOKEN!
     VoltToken public volt;
     // Dev address.
-    address public devAddr;
+    address public devaddr;
     // Treasury address.
-    address public treasuryAddr;
-    // Investor address
-    address public investorAddr;
+    address public treasuryaddr;
     // VOLT tokens created per second.
     uint256 public voltPerSec;
     // Percentage of pool rewards that goto the devs.
-    uint256 public devPercent;
+    uint256 public devPercent; // 20%
     // Percentage of pool rewards that goes to the treasury.
-    uint256 public treasuryPercent;
-    // Percentage of pool rewards that goes to the investor.
-    uint256 public investorPercent;
+    uint256 public treasuryPercent; // 20%
 
     // Info of each pool.
     PoolInfo[] public poolInfo;
-    // Set of all LP tokens that have been added as pools
-    EnumerableSet.AddressSet private lpTokens;
+    // Mapping to check which LP tokens have been added as pools.
+    mapping(IERC20 => bool) public isPool;
     // Info of each user that stakes LP tokens.
     mapping(uint256 => mapping(address => UserInfo)) public userInfo;
     // Total allocation points. Must be the sum of all allocation points in all pools.
-    uint256 public totalAllocPoint;
+    uint256 public totalAllocPoint = 0;
     // The timestamp when VOLT mining starts.
     uint256 public startTimestamp;
 
-    event Add(uint256 indexed pid, uint256 allocPoint, IERC20 indexed lpToken, IRewarder indexed rewarder);
-    event Set(uint256 indexed pid, uint256 allocPoint, IRewarder indexed rewarder, bool overwrite);
+    event Add(address indexed lpToken, uint256 allocPoint);
+    event Set(uint256 indexed pid, uint256 allocPoint);
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
-    event UpdatePool(uint256 indexed pid, uint256 lastRewardTimestamp, uint256 lpSupply, uint256 accVoltPerShare);
-    event Harvest(address indexed user, uint256 indexed pid, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event SetDevAddress(address indexed oldAddress, address indexed newAddress);
     event UpdateEmissionRate(address indexed user, uint256 _voltPerSec);
 
     constructor(
         VoltToken _volt,
-        address _devAddr,
-        address _treasuryAddr,
-        address _investorAddr,
+        address _devaddr,
+        address _treasuryaddr,
         uint256 _voltPerSec,
         uint256 _startTimestamp,
         uint256 _devPercent,
-        uint256 _treasuryPercent,
-        uint256 _investorPercent
+        uint256 _treasuryPercent
     ) public {
         require(0 <= _devPercent && _devPercent <= 1000, "constructor: invalid dev percent value");
         require(0 <= _treasuryPercent && _treasuryPercent <= 1000, "constructor: invalid treasury percent value");
-        require(0 <= _investorPercent && _investorPercent <= 1000, "constructor: invalid investor percent value");
-        require(_devPercent + _treasuryPercent + _investorPercent <= 1000, "constructor: total percent over max");
+        require(_devPercent + _treasuryPercent <= 1000, "constructor: total percent over max");
         volt = _volt;
-        devAddr = _devAddr;
-        treasuryAddr = _treasuryAddr;
-        investorAddr = _investorAddr;
+        devaddr = _devaddr;
+        treasuryaddr = _treasuryaddr;
         voltPerSec = _voltPerSec;
         startTimestamp = _startTimestamp;
         devPercent = _devPercent;
         treasuryPercent = _treasuryPercent;
-        investorPercent = _investorPercent;
-        totalAllocPoint = 0;
     }
 
     function poolLength() external view returns (uint256) {
@@ -135,17 +108,8 @@ contract MasterChefFuseFiV2 is Ownable {
 
     // Add a new lp to the pool. Can only be called by the owner.
     // XXX DO NOT add the same LP token more than once. Rewards will be messed up if you do.
-    function add(
-        uint256 _allocPoint,
-        IERC20 _lpToken,
-        IRewarder _rewarder
-    ) public onlyOwner {
-        require(Address.isContract(address(_lpToken)), "add: LP token must be a valid contract");
-        require(
-            Address.isContract(address(_rewarder)) || address(_rewarder) == address(0),
-            "add: rewarder must be contract or zero"
-        );
-        require(!lpTokens.contains(address(_lpToken)), "add: LP already added");
+    function add(uint256 _allocPoint, IERC20 _lpToken) public onlyOwner {
+        require(!isPool[_lpToken], "add: LP already added");
         massUpdatePools();
         uint256 lastRewardTimestamp = block.timestamp > startTimestamp ? block.timestamp : startTimestamp;
         totalAllocPoint = totalAllocPoint.add(_allocPoint);
@@ -154,77 +118,38 @@ contract MasterChefFuseFiV2 is Ownable {
                 lpToken: _lpToken,
                 allocPoint: _allocPoint,
                 lastRewardTimestamp: lastRewardTimestamp,
-                accVoltPerShare: 0,
-                rewarder: _rewarder
+                accVoltPerShare: 0
             })
         );
-        lpTokens.add(address(_lpToken));
-        emit Add(poolInfo.length.sub(1), _allocPoint, _lpToken, _rewarder);
+        isPool[_lpToken] = true;
+        emit Add(address(_lpToken), _allocPoint);
     }
 
     // Update the given pool's VOLT allocation point. Can only be called by the owner.
-    function set(
-        uint256 _pid,
-        uint256 _allocPoint,
-        IRewarder _rewarder,
-        bool overwrite
-    ) public onlyOwner {
-        require(
-            Address.isContract(address(_rewarder)) || address(_rewarder) == address(0),
-            "set: rewarder must be contract or zero"
-        );
+    function set(uint256 _pid, uint256 _allocPoint) public onlyOwner {
         massUpdatePools();
         totalAllocPoint = totalAllocPoint.sub(poolInfo[_pid].allocPoint).add(_allocPoint);
         poolInfo[_pid].allocPoint = _allocPoint;
-        if (overwrite) {
-            poolInfo[_pid].rewarder = _rewarder;
-        }
-        emit Set(_pid, _allocPoint, overwrite ? _rewarder : poolInfo[_pid].rewarder, overwrite);
+        emit Set(_pid, _allocPoint);
     }
 
     // View function to see pending VOLTs on frontend.
-    function pendingTokens(uint256 _pid, address _user)
-        external
-        view
-        returns (
-            uint256 pendingVolt,
-            address bonusTokenAddress,
-            string memory bonusTokenSymbol,
-            uint256 pendingBonusToken
-        )
-    {
+    function pendingVolt(uint256 _pid, address _user) external view returns (uint256) {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
         uint256 accVoltPerShare = pool.accVoltPerShare;
         uint256 lpSupply = pool.lpToken.balanceOf(address(this));
         if (block.timestamp > pool.lastRewardTimestamp && lpSupply != 0) {
             uint256 multiplier = block.timestamp.sub(pool.lastRewardTimestamp);
-            uint256 lpPercent = 1000 - devPercent - treasuryPercent - investorPercent;
-            uint256 voltReward = multiplier.mul(voltPerSec).mul(pool.allocPoint).div(totalAllocPoint).mul(lpPercent).div(
-                1000
-            );
+            uint256 voltReward = multiplier
+                .mul(voltPerSec)
+                .mul(pool.allocPoint)
+                .div(totalAllocPoint)
+                .mul(1000 - devPercent - treasuryPercent)
+                .div(1000);
             accVoltPerShare = accVoltPerShare.add(voltReward.mul(1e12).div(lpSupply));
         }
-        pendingVolt = user.amount.mul(accVoltPerShare).div(1e12).sub(user.rewardDebt);
-
-        // If it's a double reward farm, we return info about the bonus token
-        if (address(pool.rewarder) != address(0)) {
-            (bonusTokenAddress, bonusTokenSymbol) = rewarderBonusTokenInfo(_pid);
-            pendingBonusToken = pool.rewarder.pendingTokens(_user);
-        }
-    }
-
-    // Get bonus token info from the rewarder contract for a given pool, if it is a double reward farm
-    function rewarderBonusTokenInfo(uint256 _pid)
-        public
-        view
-        returns (address bonusTokenAddress, string memory bonusTokenSymbol)
-    {
-        PoolInfo storage pool = poolInfo[_pid];
-        if (address(pool.rewarder) != address(0)) {
-            bonusTokenAddress = address(pool.rewarder.rewardToken());
-            bonusTokenSymbol = IERC20(pool.rewarder.rewardToken()).safeSymbol();
-        }
+        return user.amount.mul(accVoltPerShare).div(1e12).sub(user.rewardDebt);
     }
 
     // Update reward variables for all pools. Be careful of gas spending!
@@ -248,14 +173,12 @@ contract MasterChefFuseFiV2 is Ownable {
         }
         uint256 multiplier = block.timestamp.sub(pool.lastRewardTimestamp);
         uint256 voltReward = multiplier.mul(voltPerSec).mul(pool.allocPoint).div(totalAllocPoint);
-        uint256 lpPercent = 1000 - devPercent - treasuryPercent - investorPercent;
-        volt.mint(devAddr, voltReward.mul(devPercent).div(1000));
-        volt.mint(treasuryAddr, voltReward.mul(treasuryPercent).div(1000));
-        volt.mint(investorAddr, voltReward.mul(investorPercent).div(1000));
+        uint256 lpPercent = 1000 - devPercent - treasuryPercent;
+        volt.mint(devaddr, voltReward.mul(devPercent).div(1000));
+        volt.mint(treasuryaddr, voltReward.mul(treasuryPercent).div(1000));
         volt.mint(address(this), voltReward.mul(lpPercent).div(1000));
         pool.accVoltPerShare = pool.accVoltPerShare.add(voltReward.mul(1e12).div(lpSupply).mul(lpPercent).div(1000));
         pool.lastRewardTimestamp = block.timestamp;
-        emit UpdatePool(_pid, pool.lastRewardTimestamp, lpSupply, pool.accVoltPerShare);
     }
 
     // Deposit LP tokens to MasterChef for VOLT allocation.
@@ -264,20 +187,12 @@ contract MasterChefFuseFiV2 is Ownable {
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
         if (user.amount > 0) {
-            // Harvest VOLT
             uint256 pending = user.amount.mul(pool.accVoltPerShare).div(1e12).sub(user.rewardDebt);
             safeVoltTransfer(msg.sender, pending);
-            emit Harvest(msg.sender, _pid, pending);
         }
+        pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
         user.amount = user.amount.add(_amount);
         user.rewardDebt = user.amount.mul(pool.accVoltPerShare).div(1e12);
-
-        IRewarder rewarder = poolInfo[_pid].rewarder;
-        if (address(rewarder) != address(0)) {
-            rewarder.onVoltReward(msg.sender, user.amount);
-        }
-
-        pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
         emit Deposit(msg.sender, _pid, _amount);
     }
 
@@ -288,21 +203,11 @@ contract MasterChefFuseFiV2 is Ownable {
         require(user.amount >= _amount, "withdraw: not good");
 
         updatePool(_pid);
-
-        // Harvest VOLT
         uint256 pending = user.amount.mul(pool.accVoltPerShare).div(1e12).sub(user.rewardDebt);
         safeVoltTransfer(msg.sender, pending);
-        emit Harvest(msg.sender, _pid, pending);
-
         user.amount = user.amount.sub(_amount);
-        user.rewardDebt = user.amount.mul(pool.accVoltPerShare).div(1e12);
-
-        IRewarder rewarder = poolInfo[_pid].rewarder;
-        if (address(rewarder) != address(0)) {
-            rewarder.onVoltReward(msg.sender, user.amount);
-        }
-
         pool.lpToken.safeTransfer(address(msg.sender), _amount);
+        user.rewardDebt = user.amount.mul(pool.accVoltPerShare).div(1e12);
         emit Withdraw(msg.sender, _pid, _amount);
     }
 
@@ -327,46 +232,22 @@ contract MasterChefFuseFiV2 is Ownable {
     }
 
     // Update dev address by the previous dev.
-    function dev(address _devAddr) public {
-        require(msg.sender == devAddr, "dev: wut?");
-        devAddr = _devAddr;
-        emit SetDevAddress(msg.sender, _devAddr);
+    function dev(address _devaddr) public {
+        require(msg.sender == devaddr, "dev: wut?");
+        devaddr = _devaddr;
+        emit SetDevAddress(msg.sender, _devaddr);
     }
 
     function setDevPercent(uint256 _newDevPercent) public onlyOwner {
         require(0 <= _newDevPercent && _newDevPercent <= 1000, "setDevPercent: invalid percent value");
-        require(treasuryPercent + _newDevPercent + investorPercent <= 1000, "setDevPercent: total percent over max");
+        require(treasuryPercent + _newDevPercent <= 1000, "setDevPercent: total percent over max");
         devPercent = _newDevPercent;
-    }
-
-    // Update treasury address by the previous treasury.
-    function setTreasuryAddr(address _treasuryAddr) public {
-        require(msg.sender == treasuryAddr, "setTreasuryAddr: wut?");
-        treasuryAddr = _treasuryAddr;
     }
 
     function setTreasuryPercent(uint256 _newTreasuryPercent) public onlyOwner {
         require(0 <= _newTreasuryPercent && _newTreasuryPercent <= 1000, "setTreasuryPercent: invalid percent value");
-        require(
-            devPercent + _newTreasuryPercent + investorPercent <= 1000,
-            "setTreasuryPercent: total percent over max"
-        );
+        require(devPercent + _newTreasuryPercent <= 1000, "setTreasuryPercent: total percent over max");
         treasuryPercent = _newTreasuryPercent;
-    }
-
-    // Update the investor address by the previous investor.
-    function setInvestorAddr(address _investorAddr) public {
-        require(msg.sender == investorAddr, "setInvestorAddr: wut?");
-        investorAddr = _investorAddr;
-    }
-
-    function setInvestorPercent(uint256 _newInvestorPercent) public onlyOwner {
-        require(0 <= _newInvestorPercent && _newInvestorPercent <= 1000, "setInvestorPercent: invalid percent value");
-        require(
-            devPercent + _newInvestorPercent + treasuryPercent <= 1000,
-            "setInvestorPercent: total percent over max"
-        );
-        investorPercent = _newInvestorPercent;
     }
 
     // Pancake has to add hidden dummy pools inorder to alter the emission,

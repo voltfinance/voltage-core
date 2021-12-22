@@ -21,7 +21,7 @@ interface IMasterChef {
     function totalAllocPoint() external view returns (uint256);
 }
 
-interface IMasterChefFuseFiV2 {
+interface IMasterChefVoltV2 {
     using SafeERC20 for IERC20;
 
     struct UserInfo {
@@ -31,9 +31,9 @@ interface IMasterChefFuseFiV2 {
 
     struct PoolInfo {
         IERC20 lpToken; // Address of LP token contract.
-        uint256 allocPoint; // How many allocation points assigned to this poolInfo. SUSHI to distribute per block.
-        uint256 lastRewardTimestamp; // Last block number that SUSHI distribution occurs.
-        uint256 accVoltPerShare; // Accumulated SUSHI per share, times 1e12. See below.
+        uint256 allocPoint; // How many allocation points assigned to this poolInfo. VOLT to distribute per block.
+        uint256 lastRewardTimestamp; // Last block number that VOLT distribution occurs.
+        uint256 accVoltPerShare; // Accumulated VOLT per share, times 1e12. See below.
     }
 
     function poolInfo(uint256 pid) external view returns (PoolInfo memory);
@@ -44,7 +44,7 @@ interface IMasterChefFuseFiV2 {
 }
 
 /**
- * This is a sample contract to be used in the MasterChefFuseFiV2 contract for partners to reward
+ * This is a sample contract to be used in the MasterChefVoltV2 contract for partners to reward
  * stakers with their native token alongside VOLT.
  *
  * It assumes the project already has an existing MasterChef-style farm contract.
@@ -62,7 +62,7 @@ contract MasterChefRewarderPerBlock is IRewarder, Ownable {
     IERC20 public immutable lpToken;
     uint256 public immutable MCV1_pid;
     IMasterChef public immutable MCV1;
-    IMasterChefFuseFiV2 public immutable MCV2;
+    IMasterChefVoltV2 public immutable MCV2;
 
     /// @notice Info of each MCV2 user.
     /// `amount` LP token amount the user has provided.
@@ -105,12 +105,12 @@ contract MasterChefRewarderPerBlock is IRewarder, Ownable {
         uint256 _allocPoint,
         uint256 _MCV1_pid,
         IMasterChef _MCV1,
-        IMasterChefFuseFiV2 _MCV2
+        IMasterChefVoltV2 _MCV2
     ) public {
         require(Address.isContract(address(_rewardToken)), "constructor: reward token must be a valid contract");
         require(Address.isContract(address(_lpToken)), "constructor: LP token must be a valid contract");
         require(Address.isContract(address(_MCV1)), "constructor: MasterChef must be a valid contract");
-        require(Address.isContract(address(_MCV2)), "constructor: MasterChefFuseFiV2 must be a valid contract");
+        require(Address.isContract(address(_MCV2)), "constructor: MasterChefVoltV2 must be a valid contract");
 
         rewardToken = _rewardToken;
         lpToken = _lpToken;
@@ -177,7 +177,7 @@ contract MasterChefRewarderPerBlock is IRewarder, Ownable {
         MCV1.deposit(MCV1_pid, 0);
     }
 
-    /// @notice Function called by MasterChefFuseFiV2 whenever staker claims VOLT harvest. Allows staker to also receive a 2nd reward token.
+    /// @notice Function called by MasterChefVoltV2 whenever staker claims VOLT harvest. Allows staker to also receive a 2nd reward token.
     /// @param _user Address of user
     /// @param _lpAmount Number of LP tokens the user has
     function onVoltReward(address _user, uint256 _lpAmount) external override onlyMCV2 {

@@ -2,7 +2,7 @@ import { ethers, network } from "hardhat"
 import { expect } from "chai"
 import { ADDRESS_ZERO, advanceTimeAndBlock, advanceBlockTo, latest, duration, increase } from "./utilities"
 
-describe("MasterChefFuseFiV2", function () {
+describe("MasterChefVoltV3", function () {
   before(async function () {
     this.signers = await ethers.getSigners()
     this.alice = this.signers[0]
@@ -13,8 +13,8 @@ describe("MasterChefFuseFiV2", function () {
     this.investor = this.signers[5]
     this.minter = this.signers[6]
 
-    this.MCV2 = await ethers.getContractFactory("MasterChefFuseFiV2")
-    this.MCV3 = await ethers.getContractFactory("MasterChefFuseFiV3")
+    this.MCV2 = await ethers.getContractFactory("MasterChefVoltV2")
+    this.MCV3 = await ethers.getContractFactory("MasterChefVoltV3")
     this.SimpleRewarderPerSec = await ethers.getContractFactory("SimpleRewarderPerSec")
 
     this.JoeToken = await ethers.getContractFactory("VoltToken")

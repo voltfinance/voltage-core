@@ -2,7 +2,7 @@ import { ethers, network } from "hardhat"
 import { expect } from "chai"
 import { advanceTimeAndBlock, latest, duration, increase } from "./utilities"
 
-describe("MasterChefFuseFi", function () {
+describe("MasterChefVolt", function () {
   before(async function () {
     this.signers = await ethers.getSigners()
     this.alice = this.signers[0]
@@ -12,7 +12,7 @@ describe("MasterChefFuseFi", function () {
     this.treasury = this.signers[4]
     this.minter = this.signers[5]
 
-    this.MasterChef = await ethers.getContractFactory("MasterChefFuseFi")
+    this.MasterChef = await ethers.getContractFactory("MasterChefVolt")
     this.VoltToken = await ethers.getContractFactory("VoltToken")
     this.ERC20Mock = await ethers.getContractFactory("ERC20Mock", this.minter)
 

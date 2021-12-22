@@ -18,7 +18,7 @@ interface IRewarder {
     function rewardToken() external view returns (IERC20);
 }
 
-interface IMasterChefFuseFi {
+interface IMasterChefVolt {
     using SafeERC20 for IERC20;
 
     struct UserInfo {
@@ -41,7 +41,7 @@ interface IMasterChefFuseFi {
 }
 
 /**
- * This is a sample contract to be used in the MasterChefFuseFi contract for partners to reward
+ * This is a sample contract to be used in the MasterChefVolt contract for partners to reward
  * stakers with their native token alongside VOLT.
  *
  * It assumes no minting rights, so requires a set amount of YOUR_TOKEN to be transferred to this contract prior.
@@ -56,7 +56,7 @@ contract SimpleRewarderPerSec is IRewarder, BoringOwnable, ReentrancyGuard {
     IERC20 public immutable override rewardToken;
     IERC20 public immutable lpToken;
     bool public immutable isNative;
-    IMasterChefFuseFi public immutable MCJ;
+    IMasterChefVolt public immutable MCJ;
 
     /// @notice Info of each MCJ user.
     /// `amount` LP token amount the user has provided.
@@ -87,7 +87,7 @@ contract SimpleRewarderPerSec is IRewarder, BoringOwnable, ReentrancyGuard {
     event RewardRateUpdated(uint256 oldRate, uint256 newRate);
 
     modifier onlyMCJ() {
-        require(msg.sender == address(MCJ), "onlyMCJ: only MasterChefFuseFi can call this function");
+        require(msg.sender == address(MCJ), "onlyMCJ: only MasterChefVolt can call this function");
         _;
     }
 
@@ -95,12 +95,12 @@ contract SimpleRewarderPerSec is IRewarder, BoringOwnable, ReentrancyGuard {
         IERC20 _rewardToken,
         IERC20 _lpToken,
         uint256 _tokenPerSec,
-        IMasterChefFuseFi _MCJ,
+        IMasterChefVolt _MCJ,
         bool _isNative
     ) public {
         require(Address.isContract(address(_rewardToken)), "constructor: reward token must be a valid contract");
         require(Address.isContract(address(_lpToken)), "constructor: LP token must be a valid contract");
-        require(Address.isContract(address(_MCJ)), "constructor: MasterChefFuseFi must be a valid contract");
+        require(Address.isContract(address(_MCJ)), "constructor: MasterChefVolt must be a valid contract");
 
         rewardToken = _rewardToken;
         lpToken = _lpToken;
@@ -140,7 +140,7 @@ contract SimpleRewarderPerSec is IRewarder, BoringOwnable, ReentrancyGuard {
         emit RewardRateUpdated(oldRate, _tokenPerSec);
     }
 
-    /// @notice Function called by MasterChefFuseFi whenever staker claims VOLT harvest. Allows staker to also receive a 2nd reward token.
+    /// @notice Function called by MasterChefVolt whenever staker claims VOLT harvest. Allows staker to also receive a 2nd reward token.
     /// @param _user Address of user
     /// @param _lpAmount Number of LP tokens the user has
     function onVoltReward(address _user, uint256 _lpAmount) external override onlyMCJ nonReentrant {

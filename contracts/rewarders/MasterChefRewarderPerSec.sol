@@ -29,7 +29,7 @@ interface IMasterChef {
     function totalAllocPoint() external view returns (uint256);
 }
 
-interface IMasterChefFuseFiV2 {
+interface IMasterChefVoltV2 {
     using SafeERC20 for IERC20;
 
     struct UserInfo {
@@ -52,7 +52,7 @@ interface IMasterChefFuseFiV2 {
 }
 
 /**
- * This is a sample contract to be used in the MasterChefFuseFiV2 contract for partners to reward
+ * This is a sample contract to be used in the MasterChefVoltV2 contract for partners to reward
  * stakers with their native token alongside VOLT.
  *
  * It assumes the project already has an existing MasterChef-style farm contract.
@@ -70,7 +70,7 @@ contract MasterChefRewarderPerSec is IRewarder, Ownable {
     IERC20 public immutable lpToken;
     uint256 public immutable MCV1_pid;
     IMasterChef public immutable MCV1;
-    IMasterChefFuseFiV2 public immutable MCV2;
+    IMasterChefVoltV2 public immutable MCV2;
 
     /// @notice Info of each MCV2 user.
     /// `amount` LP token amount the user has provided.
@@ -113,12 +113,12 @@ contract MasterChefRewarderPerSec is IRewarder, Ownable {
         uint256 _allocPoint,
         uint256 _MCV1_pid,
         IMasterChef _MCV1,
-        IMasterChefFuseFiV2 _MCV2
+        IMasterChefVoltV2 _MCV2
     ) public {
         require(Address.isContract(address(_rewardToken)), "constructor: reward token must be a valid contract");
         require(Address.isContract(address(_lpToken)), "constructor: LP token must be a valid contract");
         require(Address.isContract(address(_MCV1)), "constructor: MasterChef must be a valid contract");
-        require(Address.isContract(address(_MCV2)), "constructor: MasterChefFuseFiV2 must be a valid contract");
+        require(Address.isContract(address(_MCV2)), "constructor: MasterChefVoltV2 must be a valid contract");
 
         rewardToken = _rewardToken;
         lpToken = _lpToken;

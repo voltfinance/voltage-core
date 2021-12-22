@@ -127,12 +127,12 @@ library BoringERC20 {
     }
 }
 
-/// @notice The (older) MasterChefFuseFiV2 contract gives out a constant number of VOLT tokens per block.
+/// @notice The (older) MasterChefVoltV2 contract gives out a constant number of VOLT tokens per block.
 /// It is the only address with minting rights for VOLT.
-/// The idea for this MasterChefFuseFiV3 (MCJV3) contract is therefore to be the owner of a dummy token
-/// that is deposited into the MasterChefFuseFiV2 (MCJV2) contract.
+/// The idea for this MasterChefVoltV3 (MCJV3) contract is therefore to be the owner of a dummy token
+/// that is deposited into the MasterChefVoltV2 (MCJV2) contract.
 /// The allocation point for this pool on MCJV3 is the total allocation point for all pools that receive double incentives.
-contract MasterChefFuseFiV3 is Ownable, ReentrancyGuard {
+contract MasterChefVoltV3 is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
     using BoringERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;

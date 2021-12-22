@@ -17,7 +17,7 @@ interface IRewarder {
     function rewardToken() external view returns (IERC20);
 }
 
-interface IMasterChefFuseFiV2 {
+interface IMasterChefVoltV2 {
     using SafeERC20 for IERC20;
 
     struct UserInfo {
@@ -40,7 +40,7 @@ interface IMasterChefFuseFiV2 {
 }
 
 /**
- * This is a sample contract to be used in the MasterChefFuseFiV2 contract for partners to reward
+ * This is a sample contract to be used in the MasterChefVoltV2 contract for partners to reward
  * stakers with their native token alongside VOLT.
  *
  * It assumes no minting rights, so requires a set amount of YOUR_TOKEN to be transferred to this contract prior.
@@ -54,7 +54,7 @@ contract SimpleRewarderPerBlock is IRewarder, BoringOwnable {
 
     IERC20 public immutable override rewardToken;
     IERC20 public immutable lpToken;
-    IMasterChefFuseFiV2 public immutable MC_V2;
+    IMasterChefVoltV2 public immutable MC_V2;
 
     /// @notice Info of each MCV2 user.
     /// `amount` LP token amount the user has provided.
@@ -92,11 +92,11 @@ contract SimpleRewarderPerBlock is IRewarder, BoringOwnable {
         IERC20 _rewardToken,
         IERC20 _lpToken,
         uint256 _tokenPerBlock,
-        IMasterChefFuseFiV2 _MCV2
+        IMasterChefVoltV2 _MCV2
     ) public {
         require(Address.isContract(address(_rewardToken)), "constructor: reward token must be a valid contract");
         require(Address.isContract(address(_lpToken)), "constructor: LP token must be a valid contract");
-        require(Address.isContract(address(_MCV2)), "constructor: MasterChefFuseFiV2 must be a valid contract");
+        require(Address.isContract(address(_MCV2)), "constructor: MasterChefVoltV2 must be a valid contract");
 
         rewardToken = _rewardToken;
         lpToken = _lpToken;
@@ -135,7 +135,7 @@ contract SimpleRewarderPerBlock is IRewarder, BoringOwnable {
         emit RewardRateUpdated(oldRate, _tokenPerBlock);
     }
 
-    /// @notice Function called by MasterChefFuseFiV2 whenever staker claims VOLT harvest. Allows staker to also receive a 2nd reward token.
+    /// @notice Function called by MasterChefVoltV2 whenever staker claims VOLT harvest. Allows staker to also receive a 2nd reward token.
     /// @param _user Address of user
     /// @param _lpAmount Number of LP tokens the user has
     function onVoltReward(address _user, uint256 _lpAmount) external override onlyMCV2 {
@@ -167,7 +167,7 @@ contract SimpleRewarderPerBlock is IRewarder, BoringOwnable {
         PoolInfo memory pool = poolInfo;
         UserInfo storage user = userInfo[_user];
 
-        uint256 accTokenPerShare = poolInfo.accTokenPerShare;
+        uint256 accTokenPerShare = pool.accTokenPerShare;
         uint256 lpSupply = lpToken.balanceOf(address(MC_V2));
 
         if (block.number > poolInfo.lastRewardBlock && lpSupply != 0) {

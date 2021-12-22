@@ -2,7 +2,7 @@ import { ethers, network } from "hardhat"
 import { expect } from "chai"
 import { ADDRESS_ZERO, advanceTimeAndBlock, advanceBlockTo, latest, duration, increase } from "./utilities"
 
-describe("MasterChefFuseFiV2", function () {
+describe("MasterChefVoltV2", function () {
   before(async function () {
     this.signers = await ethers.getSigners()
     this.alice = this.signers[0]
@@ -15,7 +15,7 @@ describe("MasterChefFuseFiV2", function () {
 
     this.MCV1PerBlock = await ethers.getContractFactory("MasterChef")
     this.MCV1PerSec = await ethers.getContractFactory("MasterChefPerSec")
-    this.MCV2 = await ethers.getContractFactory("MasterChefFuseFiV2")
+    this.MCV2 = await ethers.getContractFactory("MasterChefVoltV2")
     this.SimpleRewarderPerBlock = await ethers.getContractFactory("SimpleRewarderPerBlock")
     this.SimpleRewarderPerSec = await ethers.getContractFactory("SimpleRewarderPerSec")
     this.MasterChefRewarderPerBlock = await ethers.getContractFactory("MasterChefRewarderPerBlock")
@@ -227,7 +227,7 @@ describe("MasterChefFuseFiV2", function () {
 
       await expect(
         this.SimpleRewarderPerBlock.deploy(this.partnerToken.address, this.lp.address, this.partnerRewardPerBlock, ADDRESS_ZERO)
-      ).to.be.revertedWith("constructor: MasterChefFuseFiV2 must be a valid contract")
+      ).to.be.revertedWith("constructor: MasterChefVoltV2 must be a valid contract")
     })
 
     it("should check rewarder added and set properly", async function () {
@@ -287,7 +287,7 @@ describe("MasterChefFuseFiV2", function () {
       expect((await this.chef.poolInfo(0)).rewarder).to.equal(this.rewarder.address)
     })
 
-    it("should allow emergency withdraw from MasterChefFuseFiV2", async function () {
+    it("should allow emergency withdraw from MasterChefVoltV2", async function () {
       const startTime = (await latest()).add(60)
       this.chef = await this.MCV2.deploy(
         this.volt.address,
@@ -391,7 +391,7 @@ describe("MasterChefFuseFiV2", function () {
       expect(await this.partnerToken.balanceOf(this.bob.address)).to.be.within(560, 600)
     })
 
-    it("should only allow MasterChefFuseFiV2 to call onVoltReward", async function () {
+    it("should only allow MasterChefVoltV2 to call onVoltReward", async function () {
       const startTime = (await latest()).add(60)
       this.chef = await this.MCV2.deploy(
         this.volt.address,
@@ -803,7 +803,7 @@ describe("MasterChefFuseFiV2", function () {
       expect(await this.volt.balanceOf(this.dev.address)).to.be.within(1000 - this.tokenOffset, 1020 + this.tokenOffset)
       expect(await this.volt.balanceOf(this.treasury.address)).to.be.within(1000 - this.tokenOffset, 1020 + this.tokenOffset)
       expect(await this.volt.balanceOf(this.investor.address)).to.be.within(500 - this.tokenOffset, 510 + this.tokenOffset)
-      // MasterChefFuseFi should have nothing
+      // MasterChefVolt should have nothing
       expect(await this.volt.balanceOf(this.chef.address)).to.be.within(0, 0 + this.tokenOffset)
 
       // // All of them should have 1000 LPs back.
@@ -985,7 +985,7 @@ describe("MasterChefFuseFiV2", function () {
 
       await expect(
         this.SimpleRewarderPerSec.deploy(this.partnerToken.address, this.lp.address, this.partnerRewardPerSec, ADDRESS_ZERO, false)
-      ).to.be.revertedWith("constructor: MasterChefFuseFi must be a valid contract")
+      ).to.be.revertedWith("constructor: MasterChefVolt must be a valid contract")
     })
 
     it("should check rewarder added and set properly", async function () {
@@ -1204,7 +1204,7 @@ describe("MasterChefFuseFiV2", function () {
       expect(bobBalFinal.sub(bobBalAfter)).to.lt(ethers.utils.parseEther("210"))
     })
 
-    it("should only allow MasterChefFuseFiV2 to call onVoltReward", async function () {
+    it("should only allow MasterChefVoltV2 to call onVoltReward", async function () {
       const startTime = (await latest()).add(60)
       this.chef = await this.MCV2.deploy(
         this.volt.address,
@@ -1238,7 +1238,7 @@ describe("MasterChefFuseFiV2", function () {
       await this.chef.connect(this.bob).deposit(0, "100") // t-53
       await advanceTimeAndBlock(42) // t-11
 
-      await expect(this.rewarder.onVoltReward(this.bob.address, "100")).to.be.revertedWith("onlyMCJ: only MasterChefFuseFi can call this function") // t-10
+      await expect(this.rewarder.onVoltReward(this.bob.address, "100")).to.be.revertedWith("onlyMCJ: only MasterChefVolt can call this function") // t-10
       await this.chef.connect(this.bob).deposit(0, "0") // t-9
       // Bob should have:
       //   - 0 VoltToken
@@ -1617,7 +1617,7 @@ describe("MasterChefFuseFiV2", function () {
       expect(await this.volt.balanceOf(this.dev.address)).to.be.within(1000 - this.tokenOffset, 1020 + this.tokenOffset)
       expect(await this.volt.balanceOf(this.treasury.address)).to.be.within(1000 - this.tokenOffset, 1020 + this.tokenOffset)
       expect(await this.volt.balanceOf(this.investor.address)).to.be.within(500 - this.tokenOffset, 510 + this.tokenOffset)
-      // MasterChefFuseFi should have nothing
+      // MasterChefVolt should have nothing
       expect(await this.volt.balanceOf(this.chef.address)).to.be.within(0, 0 + this.tokenOffset)
 
       // // All of them should have 1000 LPs back.
@@ -1882,7 +1882,7 @@ describe("MasterChefFuseFiV2", function () {
           this.partnerChef.address,
           ADDRESS_ZERO
         )
-      ).to.be.revertedWith("constructor: MasterChefFuseFiV2 must be a valid contract")
+      ).to.be.revertedWith("constructor: MasterChefVoltV2 must be a valid contract")
     })
 
     it("should check rewarder added and set properly", async function () {
@@ -1967,7 +1967,7 @@ describe("MasterChefFuseFiV2", function () {
       expect((await this.chef.poolInfo(0)).rewarder).to.equal(this.rewarder.address)
     })
 
-    it("should only allow MasterChefFuseFiV2 to call onVoltReward", async function () {
+    it("should only allow MasterChefVoltV2 to call onVoltReward", async function () {
       const startTime = (await latest()).add(60)
       this.chef = await this.MCV2.deploy(
         this.volt.address,
@@ -2492,7 +2492,7 @@ describe("MasterChefFuseFiV2", function () {
       expect(await this.volt.balanceOf(this.dev.address)).to.be.within(1000 - this.tokenOffset, 1020 + this.tokenOffset)
       expect(await this.volt.balanceOf(this.treasury.address)).to.be.within(1000 - this.tokenOffset, 1020 + this.tokenOffset)
       expect(await this.volt.balanceOf(this.investor.address)).to.be.within(500 - this.tokenOffset, 510 + this.tokenOffset)
-      // MasterChefFuseFi and PartnerChef should have nothing
+      // MasterChefVolt and PartnerChef should have nothing
       expect(await this.volt.balanceOf(this.chef.address)).to.be.within(0, 0 + this.tokenOffset)
       expect(await this.partnerToken.balanceOf(this.partnerChef.address)).to.be.within(0, 0 + this.tokenOffset)
 
@@ -2734,7 +2734,7 @@ describe("MasterChefFuseFiV2", function () {
           this.partnerChef.address,
           ADDRESS_ZERO
         )
-      ).to.be.revertedWith("constructor: MasterChefFuseFiV2 must be a valid contract")
+      ).to.be.revertedWith("constructor: MasterChefVoltV2 must be a valid contract")
     })
 
     it("should check rewarder added and set properly", async function () {
@@ -2819,7 +2819,7 @@ describe("MasterChefFuseFiV2", function () {
       expect((await this.chef.poolInfo(0)).rewarder).to.equal(this.rewarder.address)
     })
 
-    it("should only allow MasterChefFuseFiV2 to call onVoltReward", async function () {
+    it("should only allow MasterChefVoltV2 to call onVoltReward", async function () {
       const startTime = (await latest()).add(60)
       this.chef = await this.MCV2.deploy(
         this.volt.address,
@@ -3342,7 +3342,7 @@ describe("MasterChefFuseFiV2", function () {
       expect(await this.volt.balanceOf(this.dev.address)).to.be.within(1000 - this.tokenOffset, 1020 + this.tokenOffset)
       expect(await this.volt.balanceOf(this.treasury.address)).to.be.within(1000 - this.tokenOffset, 1020 + this.tokenOffset)
       expect(await this.volt.balanceOf(this.investor.address)).to.be.within(500 - this.tokenOffset, 510 + this.tokenOffset)
-      // MasterChefFuseFi and PartnerChef should have nothing
+      // MasterChefVolt and PartnerChef should have nothing
       expect(await this.volt.balanceOf(this.chef.address)).to.be.within(0, 0 + this.tokenOffset)
       expect(await this.partnerToken.balanceOf(this.partnerChef.address)).to.be.within(0, 0 + this.tokenOffset)
 
