@@ -11,14 +11,14 @@ import "../libraries/SafeERC20.sol";
 interface IRewarder {
     using SafeERC20 for IERC20;
 
-    function onJoeReward(address user, uint256 newLpAmount) external;
+    function onVoltReward(address user, uint256 newLpAmount) external;
 
     function pendingTokens(address user) external view returns (uint256 pending);
 
     function rewardToken() external view returns (IERC20);
 }
 
-interface IMasterChefJoe {
+interface IMasterChefVolt {
     using SafeERC20 for IERC20;
 
     struct UserInfo {
@@ -30,7 +30,7 @@ interface IMasterChefJoe {
         IERC20 lpToken; // Address of LP token contract.
         uint256 allocPoint; // How many allocation points assigned to this poolInfo. SUSHI to distribute per block.
         uint256 lastRewardTimestamp; // Last block timestamp that SUSHI distribution occurs.
-        uint256 accJoePerShare; // Accumulated SUSHI per share, times 1e12. See below.
+        uint256 accVoltPerShare; // Accumulated SUSHI per share, times 1e12. See below.
     }
 
     function poolInfo(uint256 pid) external view returns (PoolInfo memory);
@@ -41,11 +41,11 @@ interface IMasterChefJoe {
 }
 
 /**
- * This is a sample contract to be used in the MasterChefJoe contract for partners to reward
- * stakers with their native token alongside JOE.
+ * This is a sample contract to be used in the MasterChefVolt contract for partners to reward
+ * stakers with their native token alongside VOLT.
  *
  * It assumes no minting rights, so requires a set amount of YOUR_TOKEN to be transferred to this contract prior.
- * E.g. say you've allocated 100,000 XYZ to the JOE-XYZ farm over 30 days. Then you would need to transfer
+ * E.g. say you've allocated 100,000 XYZ to the VOLT-XYZ farm over 30 days. Then you would need to transfer
  * 100,000 XYZ and set the block reward accordingly so it's fully distributed after 30 days.
  *
  */
@@ -56,7 +56,7 @@ contract SimpleRewarderPerSec is IRewarder, BoringOwnable, ReentrancyGuard {
     IERC20 public immutable override rewardToken;
     IERC20 public immutable lpToken;
     bool public immutable isNative;
-    IMasterChefJoe public immutable MCJ;
+    IMasterChefVolt public immutable MCJ;
 
     /// @notice Info of each MCJ user.
     /// `amount` LP token amount the user has provided.
@@ -87,7 +87,7 @@ contract SimpleRewarderPerSec is IRewarder, BoringOwnable, ReentrancyGuard {
     event RewardRateUpdated(uint256 oldRate, uint256 newRate);
 
     modifier onlyMCJ() {
-        require(msg.sender == address(MCJ), "onlyMCJ: only MasterChefJoe can call this function");
+        require(msg.sender == address(MCJ), "onlyMCJ: only MasterChefVolt can call this function");
         _;
     }
 
@@ -95,12 +95,12 @@ contract SimpleRewarderPerSec is IRewarder, BoringOwnable, ReentrancyGuard {
         IERC20 _rewardToken,
         IERC20 _lpToken,
         uint256 _tokenPerSec,
-        IMasterChefJoe _MCJ,
+        IMasterChefVolt _MCJ,
         bool _isNative
     ) public {
         require(Address.isContract(address(_rewardToken)), "constructor: reward token must be a valid contract");
         require(Address.isContract(address(_lpToken)), "constructor: LP token must be a valid contract");
-        require(Address.isContract(address(_MCJ)), "constructor: MasterChefJoe must be a valid contract");
+        require(Address.isContract(address(_MCJ)), "constructor: MasterChefVolt must be a valid contract");
 
         rewardToken = _rewardToken;
         lpToken = _lpToken;
@@ -140,10 +140,10 @@ contract SimpleRewarderPerSec is IRewarder, BoringOwnable, ReentrancyGuard {
         emit RewardRateUpdated(oldRate, _tokenPerSec);
     }
 
-    /// @notice Function called by MasterChefJoe whenever staker claims JOE harvest. Allows staker to also receive a 2nd reward token.
+    /// @notice Function called by MasterChefVolt whenever staker claims VOLT harvest. Allows staker to also receive a 2nd reward token.
     /// @param _user Address of user
     /// @param _lpAmount Number of LP tokens the user has
-    function onJoeReward(address _user, uint256 _lpAmount) external override onlyMCJ nonReentrant {
+    function onVoltReward(address _user, uint256 _lpAmount) external override onlyMCJ nonReentrant {
         updatePool();
         PoolInfo memory pool = poolInfo;
         UserInfo storage user = userInfo[_user];
