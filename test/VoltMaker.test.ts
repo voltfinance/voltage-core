@@ -4,7 +4,7 @@ import { prepare, deploy, getBigNumber, createSLP } from "./utilities"
 
 describe("VoltMaker", function () {
   before(async function () {
-    await prepare(this, ["VoltMaker", "VoltBar", "VoltMakerExploitMock", "ERC20Mock", "FuseFiFactory", "FuseFiPair"])
+    await prepare(this, ["VoltMaker", "VoltBar", "VoltMakerExploitMock", "ERC20Mock", "UniswapV2Factory", "UniswapV2Pair"])
   })
 
   beforeEach(async function () {
@@ -15,7 +15,7 @@ describe("VoltMaker", function () {
       ["usdc", this.ERC20Mock, ["USDC", "USDC", getBigNumber("10000000")]],
       ["weth", this.ERC20Mock, ["WETH", "ETH", getBigNumber("10000000")]],
       ["strudel", this.ERC20Mock, ["$TRDL", "$TRDL", getBigNumber("10000000")]],
-      ["factory", this.FuseFiFactory, [this.alice.address]],
+      ["factory", this.UniswapV2Factory, [this.alice.address]],
     ])
     await deploy(this, [["bar", this.VoltBar, [this.joe.address]]])
     await deploy(this, [["joeMaker", this.VoltMaker, [this.factory.address, this.bar.address, this.joe.address, this.weth.address]]])

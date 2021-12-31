@@ -36,22 +36,22 @@ describe("voltMakerV2", function () {
     // ABIs
     this.joeMakerV2CF = await ethers.getContractFactory("VoltMakerV2")
     this.joeMakerCF = await ethers.getContractFactory("VoltMaker")
-    this.ERC20CF = await ethers.getContractFactory("FuseFiERC20")
+    this.ERC20CF = await ethers.getContractFactory("UniswapV2ERC20")
     this.ZapCF = await ethers.getContractFactory("Zap")
-    this.PairCF = await ethers.getContractFactory("FuseFiPair")
-    this.RouterCF = await ethers.getContractFactory("FuseFiRouter02")
+    this.PairCF = await ethers.getContractFactory("UniswapV2Pair")
+    this.RouterCF = await ethers.getContractFactory("UniswapV2Router02")
 
     // Account
     this.signers = await ethers.getSigners()
     this.alice = this.signers[0]
 
     // Contracts
-    this.factory = await ethers.getContractAt("FuseFiFactory", FACTORY_ADDRESS)
+    this.factory = await ethers.getContractAt("UniswapV2Factory", FACTORY_ADDRESS)
     this.zap = await this.ZapCF.attach(ZAP_ADDRESS, this.alice)
     this.router = await this.RouterCF.attach(ROUTER_ADDRESS, this.alice)
 
     // Tokens
-    this.wavax = await ethers.getContractAt("IWFUSE", WAVAX_ADDRESS, this.alice)
+    this.wavax = await ethers.getContractAt("IWETH", WAVAX_ADDRESS, this.alice)
     this.joe = await this.ERC20CF.attach(JOE_ADDRESS)
     this.usdt = await this.ERC20CF.attach(USDT_ADDRESS)
     this.usdc = await this.ERC20CF.attach(USDC_ADDRESS)
@@ -216,7 +216,7 @@ describe("voltMakerV2", function () {
       // We swap 1 $AVAX for $TRACTOR, 2% cause of the reflect token and 0.3% Fees on swap.
       const amountOutWithFeesAndReflectFees = reserve0.mul(getBigNumber(1)).div(reserve1).mul("98").div("100").mul("997").div("1000")
 
-      await this.router.swapFUSEForExactTokens(
+      await this.router.swapETHForExactTokens(
         amountOutWithFeesAndReflectFees,
         [this.wavax.address, this.tractor.address],
         this.alice.address,
