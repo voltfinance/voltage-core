@@ -245,6 +245,14 @@ const config: HardhatUserConfig = {
       tags: ["staging"],
       gasMultiplier: 2,
     },
+    fuse: {
+      url: "https://rpc.fuse.io",
+      accounts,
+      chainId: 122,
+      live: true,
+      saveDeployments: true,
+      gasPrice: 225000000000
+    }
   },
   paths: {
     artifacts: "artifacts",
