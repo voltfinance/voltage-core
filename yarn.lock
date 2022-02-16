@@ -1433,10 +1433,34 @@
     "@types/bn.js" "*"
     "@types/underscore" "*"
 
+"@uniswap/lib@1.1.1":
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/@uniswap/lib/-/lib-1.1.1.tgz#0afd29601846c16e5d082866cbb24a9e0758e6bc"
+  integrity sha512-2yK7sLpKIT91TiS5sewHtOa7YuM8IuBXVl4GZv2jZFys4D2sY7K5vZh6MqD25TPA95Od+0YzCVq6cTF2IKrOmg==
+
+"@uniswap/v2-core@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@uniswap/v2-core/-/v2-core-1.0.0.tgz#e0fab91a7d53e8cafb5326ae4ca18351116b0844"
+  integrity sha512-BJiXrBGnN8mti7saW49MXwxDBRFiWemGetE58q8zgfnPPzQKq55ADltEILqOt6VFZ22kVeVKbF8gVd8aY3l7pA==
+
 "@uniswap/v2-core@^1.0.1":
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/@uniswap/v2-core/-/v2-core-1.0.1.tgz#af8f508bf183204779938969e2e54043e147d425"
   integrity sha512-MtybtkUPSyysqLY2U210NBDeCHX+ltHt3oADGdjqoThZaFRDKwM6k1Nb3F0A3hk5hwuQvytFWhrWHOEq6nVJ8Q==
+
+"@voltage-finance/core@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@voltage-finance/core/-/core-1.0.0.tgz#301dabd0b8db7059edcadd815b1633cfd0e06b2e"
+  integrity sha512-eFnm3zOTkWK86xEiX8rbetzkDSrppnBz7D+TNd2/cVsvZyKgWWi1VtI4iXJ5dQ11/V/D4Y2mb8W2RyQg1WUdCQ==
+
+"@voltage-finance/periphery@^1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@voltage-finance/periphery/-/periphery-1.0.2.tgz#50e5040b6bfa872b2ef78580baa95e4583463be3"
+  integrity sha512-YJupVRfoEEuCHf56Quaoc3nG6Cn8aMfoBs0/xohPtysrN8DJFXJOIZWCiIL5UDdgI48Jj1p77VQw2Kzk7zoWtA==
+  dependencies:
+    "@uniswap/lib" "1.1.1"
+    "@uniswap/v2-core" "1.0.0"
+    "@voltage-finance/core" "^1.0.0"
 
 "@yarnpkg/lockfile@^1.1.0":
   version "1.1.0"

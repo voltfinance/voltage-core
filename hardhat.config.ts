@@ -72,13 +72,8 @@ const config: HardhatUserConfig = {
       tags: ["local"],
     },
     hardhat: {
-      forking: {
-        enabled: true,
-        url: "https://api.avax.network/ext/bc/C/rpc",
-        blockNumber: 6394745,
-      },
       live: false,
-      saveDeployments: true,
+      saveDeployments: false,
       tags: ["test", "local"],
     },
     ropsten: {
@@ -286,6 +281,15 @@ const config: HardhatUserConfig = {
           },
         },
       },
+      {
+        version: "0.6.6",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200
+          }
+        }
+      }
     ],
   },
   spdxLicenseIdentifier: {
