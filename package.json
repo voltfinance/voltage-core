@@ -1,5 +1,5 @@
 {
-  "name": "@traderjoe-xyz/core",
+  "name": "@voltage-finance/core-contracts",
   "version": "2.2.0",
   "license": "MIT",
   "types": "./types/index.ts",
@@ -15,15 +15,15 @@
   "author": "",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/traderjoe-xyz/joe-core.git"
+    "url": "git+https://github.com/voltfinance/voltage-core.git"
   },
   "bugs": {
-    "url": "https://github.com/traderjoe-xyz/joe-core/issues"
+    "url": "https://github.com/voltfinance/voltage-core/issues"
   },
-  "homepage": "https://github.com/traderjoe-xyz/joe-core#readme",
+  "homepage": "https://github.com/voltfinance/voltage-core#readme",
   "keywords": [
-    "traderjoe-xyz",
-    "avalanche"
+    "voltage-finance",
+    "fuse"
   ],
   "scripts": {
     "build": "hardhat compile",
@@ -75,7 +75,7 @@
     "@types/mocha": "^8.2.1",
     "@types/node": "^14.14.31",
     "@voltage-finance/core": "^1.0.0",
-    "@voltage-finance/periphery": "^1.0.2",
+    "@voltage-finance/periphery": "^1.0.3",
     "chai": "^4.2.0",
     "cross-env": "^7.0.0",
     "dotenv": "^8.2.0",

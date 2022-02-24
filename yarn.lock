@@ -1148,6 +1148,13 @@
   dependencies:
     antlr4ts "^0.5.0-alpha.4"
 
+"@solidity-parser/parser@^0.14.1":
+  version "0.14.1"
+  resolved "https://registry.yarnpkg.com/@solidity-parser/parser/-/parser-0.14.1.tgz#179afb29f4e295a77cc141151f26b3848abc3c46"
+  integrity sha512-eLjj2L6AuQjBB6s/ibwCAc0DwrR5Ge+ys+wgWo+bviU7fV2nTMQhU63CGaDKXg9iTmMxwhkyoggdIR7ZGRfMgw==
+  dependencies:
+    antlr4ts "^0.5.0-alpha.4"
+
 "@solidity-parser/parser@^0.8.0":
   version "0.8.2"
   resolved "https://registry.yarnpkg.com/@solidity-parser/parser/-/parser-0.8.2.tgz#a6a5e93ac8dca6884a99a532f133beba59b87b69"
@@ -1453,14 +1460,20 @@
   resolved "https://registry.yarnpkg.com/@voltage-finance/core/-/core-1.0.0.tgz#301dabd0b8db7059edcadd815b1633cfd0e06b2e"
   integrity sha512-eFnm3zOTkWK86xEiX8rbetzkDSrppnBz7D+TNd2/cVsvZyKgWWi1VtI4iXJ5dQ11/V/D4Y2mb8W2RyQg1WUdCQ==
 
-"@voltage-finance/periphery@^1.0.2":
-  version "1.0.2"
-  resolved "https://registry.yarnpkg.com/@voltage-finance/periphery/-/periphery-1.0.2.tgz#50e5040b6bfa872b2ef78580baa95e4583463be3"
-  integrity sha512-YJupVRfoEEuCHf56Quaoc3nG6Cn8aMfoBs0/xohPtysrN8DJFXJOIZWCiIL5UDdgI48Jj1p77VQw2Kzk7zoWtA==
+"@voltage-finance/core@^1.0.1":
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/@voltage-finance/core/-/core-1.0.1.tgz#c345e0030c61994128181623762fd02354ea2018"
+  integrity sha512-C51OVjoi7SLqkeowmxhqkw/wCcFpzk2j7Mi1kd5QkovjUhpo4TK1FEWEOz3h+r+UmefYjRxhzAFhraQkUABiPg==
+
+"@voltage-finance/periphery@^1.0.3":
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/@voltage-finance/periphery/-/periphery-1.0.3.tgz#0eaeb93ef2062199b0b9725b8d01c27f8eb6bc7e"
+  integrity sha512-x3yiQP/h73Qq7MrJB8pzSlGiud9CBIC6oAlHSAqYm1w7oTaFArH1h71yAp49lpuYbLSnHH4fEJTRqAKKNb+dqQ==
   dependencies:
     "@uniswap/lib" "1.1.1"
     "@uniswap/v2-core" "1.0.0"
-    "@voltage-finance/core" "^1.0.0"
+    "@voltage-finance/core" "^1.0.1"
+    truffle-flattener "^1.6.0"
 
 "@yarnpkg/lockfile@^1.1.0":
   version "1.1.0"
@@ -9830,6 +9843,17 @@ truffle-flattener@^1.4.0:
   dependencies:
     "@resolver-engine/imports-fs" "^0.2.2"
     "@solidity-parser/parser" "^0.8.0"
+    find-up "^2.1.0"
+    mkdirp "^1.0.4"
+    tsort "0.0.1"
+
+truffle-flattener@^1.6.0:
+  version "1.6.0"
+  resolved "https://registry.yarnpkg.com/truffle-flattener/-/truffle-flattener-1.6.0.tgz#abb64488b711e6cca0a9d3e449f6a85e35964c5d"
+  integrity sha512-scS5Bsi4CZyvlrmD4iQcLHTiG2RQFUXVheTgWeH6PuafmI+Lk5U87Es98loM3w3ImqC9/fPHq+3QIXbcPuoJ1Q==
+  dependencies:
+    "@resolver-engine/imports-fs" "^0.2.2"
+    "@solidity-parser/parser" "^0.14.1"
     find-up "^2.1.0"
     mkdirp "^1.0.4"
     tsort "0.0.1"

@@ -99,7 +99,7 @@ contract VoltRoll is Ownable {
                         hex"ff",
                         oldRouter.factory(),
                         keccak256(abi.encodePacked(token0, token1)),
-                        hex"ce0314a999e88f7354db52b5bbf1abdb9dd284e8e0100c4ef47166ab7860f148" // init code hash
+                        hex"04990f130515035f22e76663517440918b83941b25a4ec04ecdf4b2898e846aa" // init code hash
                     )
                 )
             )
