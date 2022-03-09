@@ -15,7 +15,7 @@ module.exports = async function ({ ethers, deployments, getNamedAccounts }) {
       multiSig,
       multiSig,
       "19555097552900000000", // 30 JOE per sec
-      "1646906400", // Mar 10 12:00
+      "1646913600", // Mar 10 2:00pm +2
       "0", // 20%
       "0", // 20%
       "0", // 10%
