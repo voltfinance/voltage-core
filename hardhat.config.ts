@@ -72,13 +72,8 @@ const config: HardhatUserConfig = {
       tags: ["local"],
     },
     hardhat: {
-      forking: {
-        enabled: true,
-        url: "https://api.avax.network/ext/bc/C/rpc",
-        blockNumber: 6394745,
-      },
       live: false,
-      saveDeployments: true,
+      saveDeployments: false,
       tags: ["test", "local"],
     },
     ropsten: {
@@ -245,6 +240,14 @@ const config: HardhatUserConfig = {
       tags: ["staging"],
       gasMultiplier: 2,
     },
+    fuse: {
+      url: "https://rpc.fuse.io",
+      accounts,
+      chainId: 122,
+      live: true,
+      saveDeployments: true,
+      gasPrice: 225000000000
+    }
   },
   paths: {
     artifacts: "artifacts",
@@ -278,6 +281,15 @@ const config: HardhatUserConfig = {
           },
         },
       },
+      {
+        version: "0.6.6",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200
+          }
+        }
+      }
     ],
   },
   spdxLicenseIdentifier: {

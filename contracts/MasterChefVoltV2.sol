@@ -117,6 +117,9 @@ contract MasterChefVoltV2 is Ownable {
         require(0 <= _treasuryPercent && _treasuryPercent <= 1000, "constructor: invalid treasury percent value");
         require(0 <= _investorPercent && _investorPercent <= 1000, "constructor: invalid investor percent value");
         require(_devPercent + _treasuryPercent + _investorPercent <= 1000, "constructor: total percent over max");
+        require(_devAddr != address(0), "constructor: zero address not valid value for dev addr");
+        require(_treasuryAddr != address(0), "constructor: zero address not valid value for treasury addr");
+        require(_investorAddr != address(0), "constructor: zero address not valid value for investor addr");
         volt = _volt;
         devAddr = _devAddr;
         treasuryAddr = _treasuryAddr;

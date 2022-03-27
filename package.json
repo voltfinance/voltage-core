@@ -1,5 +1,5 @@
 {
-  "name": "@traderjoe-xyz/core",
+  "name": "@voltage-finance/core-contracts",
   "version": "2.2.0",
   "license": "MIT",
   "types": "./types/index.ts",
@@ -15,15 +15,15 @@
   "author": "",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/traderjoe-xyz/joe-core.git"
+    "url": "git+https://github.com/voltfinance/voltage-core.git"
   },
   "bugs": {
-    "url": "https://github.com/traderjoe-xyz/joe-core/issues"
+    "url": "https://github.com/voltfinance/voltage-core/issues"
   },
-  "homepage": "https://github.com/traderjoe-xyz/joe-core#readme",
+  "homepage": "https://github.com/voltfinance/voltage-core#readme",
   "keywords": [
-    "traderjoe-xyz",
-    "avalanche"
+    "voltage-finance",
+    "fuse"
   ],
   "scripts": {
     "build": "hardhat compile",
@@ -53,6 +53,7 @@
     "avalanche:deploy": "hardhat --network avalanche deploy",
     "avalanche:export": "hardhat --network avalanche export --export exports/fuji.json",
     "avalanche:verify": "hardhat --network avalanche etherscan-verify --solc-input",
+    "fuse:deploy": "hardhat --network fuse deploy",
     "export": "hardhat export --export-all exports/deployments.json",
     "test": "hardhat test",
     "test:coverage": "cross-env NODE_OPTIONS=\"--max-old-space-size=2048\" hardhat coverage",
@@ -73,6 +74,8 @@
     "@typechain/ethers-v5": "^5.0.0",
     "@types/mocha": "^8.2.1",
     "@types/node": "^14.14.31",
+    "@voltage-finance/core": "^1.0.0",
+    "@voltage-finance/periphery": "^1.0.3",
     "chai": "^4.2.0",
     "cross-env": "^7.0.0",
     "dotenv": "^8.2.0",
