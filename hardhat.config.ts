@@ -5,6 +5,7 @@ import "@nomiclabs/hardhat-etherscan"
 import "@nomiclabs/hardhat-solhint"
 import "@tenderly/hardhat-tenderly"
 import "@nomiclabs/hardhat-waffle"
+import "@nomiclabs/hardhat-vyper"
 import "hardhat-abi-exporter"
 import "hardhat-deploy"
 import "hardhat-deploy-ethers"
@@ -246,8 +247,8 @@ const config: HardhatUserConfig = {
       chainId: 122,
       live: true,
       saveDeployments: true,
-      gasPrice: 225000000000
-    }
+      gasPrice: 225000000000,
+    },
   },
   paths: {
     artifacts: "artifacts",
@@ -260,6 +261,11 @@ const config: HardhatUserConfig = {
   },
   preprocess: {
     eachLine: removeConsoleLog((bre) => bre.network.name !== "hardhat" && bre.network.name !== "localhost"),
+  },
+  vyper: {
+    // version: "0.2.15"
+    // version: "0.2.16"
+    version: "0.2.4",
   },
   solidity: {
     compilers: [
@@ -286,10 +292,19 @@ const config: HardhatUserConfig = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 200
-          }
-        }
-      }
+            runs: 200,
+          },
+        },
+      },
+      {
+        version: "0.6.0",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+        },
+      },
     ],
   },
   spdxLicenseIdentifier: {
