@@ -1,4 +1,4 @@
-# @version ^0.2.4
+# @version 0.3.1
 """
 @title Voting Escrow
 @author Curve Finance
@@ -42,7 +42,12 @@ interface ERC20:
     def symbol() -> String[32]: view
     def transfer(to: address, amount: uint256) -> bool: nonpayable
     def transferFrom(spender: address, to: address, amount: uint256) -> bool: nonpayable
+    def approve(spender: address, amount: uint256) -> bool: nonpayable
 
+
+interface IVeRBNRewards:
+    def updateReward(_account: address) -> bool: nonpayable
+    def donate(_amount: uint256) -> bool: nonpayable
 
 # Interface for checking whether address belongs to a whitelisted
 # type of a smart wallet.
@@ -64,7 +69,11 @@ event CommitOwnership:
 event ApplyOwnership:
     admin: address
 
+event FundsUnlocked:
+    funds_unlocked: bool
+
 event Deposit:
+    deposit_from: indexed(address)
     provider: indexed(address)
     value: uint256
     locktime: indexed(uint256)
@@ -96,13 +105,8 @@ user_point_history: public(HashMap[address, Point[1000000000]])  # user -> Point
 user_point_epoch: public(HashMap[address, uint256])
 slope_changes: public(HashMap[uint256, int128])  # time -> signed slope change
 
-# Aragon's view methods for compatibility
-controller: public(address)
-transfersEnabled: public(bool)
-
 name: public(String[64])
 symbol: public(String[32])
-version: public(String[32])
 decimals: public(uint256)
 
 # Checker for whitelisted (smart contract) wallets which are allowed to deposit
@@ -113,22 +117,23 @@ smart_wallet_checker: public(address)
 admin: public(address)  # Can and will be a smart contract
 future_admin: public(address)
 
+is_unlocked: public(bool)
+
+reward_pool: public(address)
 
 @external
-def __init__(token_addr: address, _name: String[64], _symbol: String[32], _version: String[32]):
+def __init__(token_addr: address, _name: String[64], _symbol: String[32], _admin: address):
     """
     @notice Contract constructor
     @param token_addr `ERC20CRV` token address
     @param _name Token name
     @param _symbol Token symbol
-    @param _version Contract version - required for Aragon compatibility
+    @param _admin Admin for contract
     """
-    self.admin = msg.sender
+    self.admin = _admin
     self.token = token_addr
     self.point_history[0].blk = block.number
     self.point_history[0].ts = block.timestamp
-    self.controller = msg.sender
-    self.transfersEnabled = True
 
     _decimals: uint256 = ERC20(token_addr).decimals()
     assert _decimals <= 255
@@ -136,8 +141,12 @@ def __init__(token_addr: address, _name: String[64], _symbol: String[32], _versi
 
     self.name = _name
     self.symbol = _symbol
-    self.version = _version
 
+@external
+def set_reward_pool(addr: address):
+  assert msg.sender == self.admin or self.reward_pool == ZERO_ADDRESS # dev: admin only
+  assert addr != ZERO_ADDRESS
+  self.reward_pool = addr
 
 @external
 def commit_transfer_ownership(addr: address):
@@ -180,6 +189,14 @@ def apply_smart_wallet_checker():
     assert msg.sender == self.admin
     self.smart_wallet_checker = self.future_smart_wallet_checker
 
+@external
+def set_funds_unlocked(_funds_unlocked: bool):
+  """
+  @notice Toggle fund lock
+  """
+  assert msg.sender == self.admin  # dev: admin only
+  self.is_unlocked = _funds_unlocked
+  log FundsUnlocked(_funds_unlocked)
 
 @internal
 def assert_not_contract(addr: address):
@@ -281,7 +298,7 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
     # Go over weeks to fill history and calculate what the current point is
     t_i: uint256 = (last_checkpoint / WEEK) * WEEK
     for i in range(255):
-        # Hopefully it won't happen that this won't get used in 5 years!
+        # Hopefully it won't happen that this won't get used in 3 years!
         # If it does, users will be able to withdraw but vote weight will be broken
         t_i += WEEK
         d_slope: int128 = 0
@@ -348,9 +365,10 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
 
 
 @internal
-def _deposit_for(_addr: address, _value: uint256, unlock_time: uint256, locked_balance: LockedBalance, type: int128):
+def _deposit_for(_from: address, _addr: address, _value: uint256, unlock_time: uint256, locked_balance: LockedBalance, type: int128):
     """
     @notice Deposit and lock tokens for a user
+    @param _from Address to take funds from
     @param _addr User's wallet address
     @param _value Amount to deposit
     @param unlock_time New time when to unlock the tokens, or 0 if unchanged
@@ -358,6 +376,7 @@ def _deposit_for(_addr: address, _value: uint256, unlock_time: uint256, locked_b
     """
     _locked: LockedBalance = locked_balance
     supply_before: uint256 = self.supply
+    IVeRBNRewards(self.reward_pool).updateReward(_addr) # Reward pool snapshot
 
     self.supply = supply_before + _value
     old_locked: LockedBalance = _locked
@@ -374,11 +393,10 @@ def _deposit_for(_addr: address, _value: uint256, unlock_time: uint256, locked_b
     self._checkpoint(_addr, old_locked, _locked)
 
     if _value != 0:
-        assert ERC20(self.token).transferFrom(_addr, self, _value)
+        assert ERC20(self.token).transferFrom(_from, self, _value)
 
-    log Deposit(_addr, _value, _locked.end, type, block.timestamp)
+    log Deposit(_from, _addr, _value, _locked.end, type, block.timestamp)
     log Supply(supply_before, supply_before + _value)
-
 
 @external
 def checkpoint():
@@ -386,7 +404,6 @@ def checkpoint():
     @notice Record global data to checkpoint
     """
     self._checkpoint(ZERO_ADDRESS, empty(LockedBalance), empty(LockedBalance))
-
 
 @external
 @nonreentrant('lock')
@@ -404,8 +421,7 @@ def deposit_for(_addr: address, _value: uint256):
     assert _locked.amount > 0, "No existing lock found"
     assert _locked.end > block.timestamp, "Cannot add to expired lock. Withdraw"
 
-    self._deposit_for(_addr, _value, 0, self.locked[_addr], DEPOSIT_FOR_TYPE)
-
+    self._deposit_for(msg.sender, _addr, _value, 0, self.locked[_addr], DEPOSIT_FOR_TYPE)
 
 @external
 @nonreentrant('lock')
@@ -422,9 +438,9 @@ def create_lock(_value: uint256, _unlock_time: uint256):
     assert _value > 0  # dev: need non-zero value
     assert _locked.amount == 0, "Withdraw old tokens first"
     assert unlock_time > block.timestamp, "Can only lock until time in the future"
-    assert unlock_time <= block.timestamp + MAXTIME, "Voting lock can be 4 years max"
+    assert unlock_time <= block.timestamp + MAXTIME, "Voting lock can be 2 years max"
 
-    self._deposit_for(msg.sender, _value, unlock_time, _locked, CREATE_LOCK_TYPE)
+    self._deposit_for(msg.sender, msg.sender, _value, unlock_time, _locked, CREATE_LOCK_TYPE)
 
 
 @external
@@ -442,7 +458,7 @@ def increase_amount(_value: uint256):
     assert _locked.amount > 0, "No existing lock found"
     assert _locked.end > block.timestamp, "Cannot add to expired lock. Withdraw"
 
-    self._deposit_for(msg.sender, _value, 0, _locked, INCREASE_LOCK_AMOUNT)
+    self._deposit_for(msg.sender, msg.sender, _value, 0, _locked, INCREASE_LOCK_AMOUNT)
 
 
 @external
@@ -459,9 +475,9 @@ def increase_unlock_time(_unlock_time: uint256):
     assert _locked.end > block.timestamp, "Lock expired"
     assert _locked.amount > 0, "Nothing is locked"
     assert unlock_time > _locked.end, "Can only increase lock duration"
-    assert unlock_time <= block.timestamp + MAXTIME, "Voting lock can be 4 years max"
+    assert unlock_time <= block.timestamp + MAXTIME, "Voting lock can be 2 years max"
 
-    self._deposit_for(msg.sender, 0, unlock_time, _locked, INCREASE_UNLOCK_TIME)
+    self._deposit_for(msg.sender, msg.sender, 0, unlock_time, _locked, INCREASE_UNLOCK_TIME)
 
 
 @external
@@ -472,7 +488,8 @@ def withdraw():
     @dev Only possible if the lock has expired
     """
     _locked: LockedBalance = self.locked[msg.sender]
-    assert block.timestamp >= _locked.end, "The lock didn't expire"
+    _unlocked: bool = self.is_unlocked
+    assert block.timestamp >= _locked.end or _unlocked, "The lock didn't expire and funds are not unlocked"
     value: uint256 = convert(_locked.amount, uint256)
 
     old_locked: LockedBalance = _locked
@@ -489,9 +506,47 @@ def withdraw():
 
     assert ERC20(self.token).transfer(msg.sender, value)
 
+    if not _unlocked:
+      IVeRBNRewards(self.reward_pool).updateReward(msg.sender) # Reward pool snapshot
+
     log Withdraw(msg.sender, value, block.timestamp)
     log Supply(supply_before, supply_before - value)
 
+@external
+@nonreentrant('lock')
+def force_withdraw():
+  """
+  @notice Withdraw all tokens for `msg.sender`
+  @dev Will pay a penalty based on time.
+  With a 2 years lock on withdraw, you pay 75% penalty during the first 6 months.
+  penalty decrease linearly to zero starting when time left is under 1.5 years.
+  """
+  assert(self.is_unlocked == False)
+  _locked: LockedBalance = self.locked[msg.sender]
+  assert block.timestamp < _locked.end, "lock expired"
+
+  time_left: uint256 = _locked.end - block.timestamp
+  penalty_ratio: uint256 = min(MULTIPLIER * 3 / 4,  MULTIPLIER * time_left / MAXTIME)
+  value: uint256 = convert(_locked.amount, uint256)
+  IVeRBNRewards(self.reward_pool).updateReward(msg.sender) # Reward pool snapshot
+  old_locked: LockedBalance = _locked
+  _locked.end = 0
+  _locked.amount = 0
+  self.locked[msg.sender] = _locked
+  supply_before: uint256 = self.supply
+  self.supply = supply_before - value
+  # old_locked can have either expired <= timestamp or zero end
+  # _locked has only 0 end
+  # Both can have >= 0 amount
+  self._checkpoint(msg.sender, old_locked, _locked)
+
+  penalty: uint256 = value * penalty_ratio / MULTIPLIER
+  assert ERC20(self.token).transfer(msg.sender, value - penalty)
+  if penalty != 0:
+      assert ERC20(self.token).approve(self.reward_pool, penalty)
+      IVeRBNRewards(self.reward_pool).donate(penalty)
+  log Withdraw(msg.sender, value, block.timestamp)
+  log Supply(supply_before, supply_before - value)
 
 # The following ERC20/minime-compatible methods are not real balanceOf and supply!
 # They measure the weights for the purpose of voting, so they don't represent
@@ -543,7 +598,7 @@ def balanceOf(addr: address, _t: uint256 = block.timestamp) -> uint256:
 
 @external
 @view
-def balanceOfAt(addr: address, _block: uint256) -> uint256:
+def getPriorVotes(addr: address, _block: uint256) -> uint256:
     """
     @notice Measure voting power of `addr` at block height `_block`
     @dev Adheres to MiniMe `balanceOfAt` interface: https://github.com/Giveth/minime
@@ -658,14 +713,3 @@ def totalSupplyAt(_block: uint256) -> uint256:
     # Now dt contains info on how far are we beyond point
 
     return self.supply_at(point, point.ts + dt)
-
-
-# Dummy methods for compatibility with Aragon
-
-@external
-def changeController(_newController: address):
-    """
-    @dev Dummy method required for Aragon compatibility
-    """
-    assert msg.sender == self.controller
-    self.controller = _newController

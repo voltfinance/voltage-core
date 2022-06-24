@@ -263,9 +263,7 @@ const config: HardhatUserConfig = {
     eachLine: removeConsoleLog((bre) => bre.network.name !== "hardhat" && bre.network.name !== "localhost"),
   },
   vyper: {
-    // version: "0.2.15"
-    // version: "0.2.16"
-    version: "0.2.4",
+    version: "0.3.1",
   },
   solidity: {
     compilers: [
