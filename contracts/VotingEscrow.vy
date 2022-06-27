@@ -122,6 +122,8 @@ is_unlocked: public(bool)
 
 reward_pool: public(address)
 
+max_penalty: public(uint256)
+
 @external
 def __init__(token_addr: address, _name: String[64], _symbol: String[32], _admin: address):
     """
@@ -143,11 +145,19 @@ def __init__(token_addr: address, _name: String[64], _symbol: String[32], _admin
     self.name = _name
     self.symbol = _symbol
 
+    self.max_penalty = 50 # 50 percent
+
 @external
 def set_reward_pool(addr: address):
   assert msg.sender == self.admin or self.reward_pool == ZERO_ADDRESS # dev: admin only
   assert addr != ZERO_ADDRESS
   self.reward_pool = addr
+
+@external
+def set_max_penalty(_max_penalty: uint256):
+    assert msg.sender == self.admin
+    assert _max_penalty >= 0 and _max_penalty <= 100
+    self.max_penalty = _max_penalty
 
 @external
 def commit_transfer_ownership(addr: address):
@@ -529,7 +539,7 @@ def force_withdraw():
   assert block.timestamp < _locked.end, "lock expired"
 
   time_left: uint256 = _locked.end - block.timestamp
-  penalty_ratio: uint256 = min(MULTIPLIER * 3 / 4,  MULTIPLIER * time_left / MAXTIME)
+  penalty_ratio: uint256 = (MULTIPLIER * time_left / MAXTIME) * self.max_penalty / 100
   value: uint256 = convert(_locked.amount, uint256)
   IVeRBNRewards(self.reward_pool).updateReward(msg.sender) # Reward pool snapshot
   old_locked: LockedBalance = _locked
@@ -598,6 +608,11 @@ def balanceOf(addr: address, _t: uint256 = block.timestamp) -> uint256:
             last_point.bias = 0
         return convert(last_point.bias, uint256)
 
+# TODO: remove
+@external
+@view
+def getCurrBlock() -> uint256:
+    return block.number
 
 @external
 @view
@@ -611,7 +626,7 @@ def getPriorVotes(addr: address, _block: uint256) -> uint256:
     """
     # Copying and pasting totalSupply code because Vyper cannot pass by
     # reference yet
-    assert _block <= block.number
+    assert _block <= block.number, "Must pass block number in the past"
 
     # Binary search
     _min: uint256 = 0
@@ -700,7 +715,7 @@ def totalSupplyAt(_block: uint256) -> uint256:
     @param _block Block to calculate the total voting power at
     @return Total voting power at `_block`
     """
-    assert _block <= block.number
+    assert _block <= block.number, "Must pass block number in the past"
     _epoch: uint256 = self.epoch
     target_epoch: uint256 = self.find_block_epoch(_block, _epoch)
 

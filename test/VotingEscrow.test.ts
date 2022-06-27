@@ -33,7 +33,7 @@ import { Account } from "./utilities/types";
 
 chai.use(solidity);
 
-describe.skip("VotingEscrow", () => {
+describe("VotingEscrow", () => {
   let VoltToken: ContractFactory;
   let VotingEscrow: ContractFactory;
 
@@ -46,17 +46,19 @@ describe.skip("VotingEscrow", () => {
     sa = await new StandardAccounts().initAccounts(accounts);
 
     // Get VOLT token
-    VoltToken = await ethers.getContractFactory("VoltToken");
-    mta = await VoltToken.deploy(
-      "Volt Token",
-      "VOLT",
-      simpleToExactAmount(1000000000, DEFAULT_DECIMALS),
-      sa.fundManager.address
-    );
+    VoltToken = await ethers.getContractFactory("VoltToken", sa.fundManager.signer);
+    // mta = await VoltToken.deploy(
+    //   "Volt Token",
+    //   "VOLT",
+    //   simpleToExactAmount(1000000000, DEFAULT_DECIMALS),
+    //   sa.fundManager.address
+    // );
+    mta = await VoltToken.deploy()
 
     await mta.deployed();
+    await mta.connect(sa.fundManager.signer).mint(sa.fundManager.address, simpleToExactAmount(1000000000, DEFAULT_DECIMALS))
 
-    await mta.connect(sa.fundManager.signer).setTransfersAllowed(true);
+    // await mta.connect(sa.fundManager.signer).setTransfersAllowed(true);
 
     VotingEscrow = await ethers.getContractFactory(
       "VotingEscrow"
@@ -99,7 +101,7 @@ describe.skip("VotingEscrow", () => {
     );
 
     await votingLockup.deployed();
-    await mta.approve(
+    await mta.connect(sa.default.signer).approve(
       votingLockup.address,
       simpleToExactAmount(100, DEFAULT_DECIMALS)
     );
@@ -123,11 +125,11 @@ describe.skip("VotingEscrow", () => {
     });
     describe("before any stakes are made", () => {
       it("returns balances", async () => {
+        // console.log(await votingLockup.getPriorVotes(sa.default.address, 1))
         expect(await votingLockup["balanceOf(address)"](sa.default.address)).eq(
           BN.from(0)
         );
-        console.log("problem here")
-        expect(await votingLockup.getPriorVotes(sa.default.address, 1)).eq(
+        expect(await votingLockup["getPriorVotes(address,uint256)"](sa.default.address, 8)).eq(
           BN.from(0)
         );
       });
@@ -141,7 +143,7 @@ describe.skip("VotingEscrow", () => {
       });
       it("returns totalSupply", async () => {
         expect(await votingLockup["totalSupply()"]()).eq(BN.from(0));
-        expect(await votingLockup["totalSupplyAt(uint256)"](1)).eq(BN.from(0));
+        expect(await votingLockup["totalSupplyAt(uint256)"](8)).eq(BN.from(0));
       });
       it("returns totalSupply at latest block", async () => {
         expect(
@@ -300,26 +302,38 @@ describe.skip("VotingEscrow", () => {
 
     describe("creating a lockup", () => {
       it("allows user to create a lock", async () => {
+        console.log({
+          "alice": await mta.allowance(alice.address, votingLockup.address),
+          "aliceBalance": await mta.balanceOf(alice.address),
+          "bob": await mta.balanceOf(bob.address),
+          "eve": await mta.balanceOf(eve.address),
+          "charlie": await mta.balanceOf(charlie.address),
+          stakeAmt1
+        })
         await votingLockup
           .connect(alice.signer)
           .create_lock(stakeAmt1, start.add(ONE_YEAR));
+        console.log("Alice in")
 
         await votingLockup
           .connect(bob.signer)
           .create_lock(stakeAmt2, start.add(ONE_WEEK.mul(26)));
+        console.log("Bob in")
 
         await votingLockup
           .connect(charlie.signer)
           .create_lock(stakeAmt1, start.add(ONE_WEEK.mul(26)));
+        console.log("Charlie in")
 
         await votingLockup
           .connect(eve.signer)
           .create_lock(stakeAmt1, start.add(ONE_WEEK));
+        console.log("Eve in")
 
-        const aliceData = await snapshotData(alice);
-        const bobData = await snapshotData(bob);
-        const charlieData = await snapshotData(charlie);
-        const eveData = await snapshotData(eve);
+        // const aliceData = await snapshotData(alice);
+        // const bobData = await snapshotData(bob);
+        // const charlieData = await snapshotData(charlie);
+        // const eveData = await snapshotData(eve);
 
         // Bias
         /*assertBNClosePercent(
@@ -416,8 +430,8 @@ describe.skip("VotingEscrow", () => {
           await expect(
             votingLockup
               .connect(alice.signer)
-              .increase_unlock_time((await getTimestamp()).add(ONE_DAY))
-          ).to.be.revertedWith("Can only increase lock WEEK");
+              .increase_unlock_time((await getTimestamp()).add(ONE_DAY.mul(29)))
+          ).to.be.revertedWith("Voting lock can be 1 month min");
           await expect(
             votingLockup
               .connect(bob.signer)
