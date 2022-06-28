@@ -387,7 +387,7 @@ def _deposit_for(_from: address, _addr: address, _value: uint256, unlock_time: u
     """
     _locked: LockedBalance = locked_balance
     supply_before: uint256 = self.supply
-    IVeRBNRewards(self.reward_pool).updateReward(_addr) # Reward pool snapshot
+    # IVeRBNRewards(self.reward_pool).updateReward(_addr) # Reward pool snapshot
 
     self.supply = supply_before + _value
     old_locked: LockedBalance = _locked
@@ -446,7 +446,7 @@ def create_lock(_value: uint256, _unlock_time: uint256):
     unlock_time: uint256 = (_unlock_time / WEEK) * WEEK  # Locktime is rounded down to weeks
     _locked: LockedBalance = self.locked[msg.sender]
 
-    assert _value > 0  # dev: need non-zero value
+    assert _value > 0, "Must stake non zero amount"  # dev: need non-zero value
     assert _locked.amount == 0, "Withdraw old tokens first"
     assert unlock_time > block.timestamp, "Can only lock until time in the future"
     assert unlock_time <= block.timestamp + MAXTIME, "Voting lock can be 2 years max"
@@ -466,7 +466,7 @@ def increase_amount(_value: uint256):
     self.assert_not_contract(msg.sender)
     _locked: LockedBalance = self.locked[msg.sender]
 
-    assert _value > 0  # dev: need non-zero value
+    assert _value > 0, "Must stake non zero amount"  # dev: need non-zero value
     assert _locked.amount > 0, "No existing lock found"
     assert _locked.end > block.timestamp, "Cannot add to expired lock. Withdraw"
 
@@ -519,8 +519,8 @@ def withdraw():
 
     assert ERC20(self.token).transfer(msg.sender, value)
 
-    if not _unlocked:
-      IVeRBNRewards(self.reward_pool).updateReward(msg.sender) # Reward pool snapshot
+    # if not _unlocked:
+    #   IVeRBNRewards(self.reward_pool).updateReward(msg.sender) # Reward pool snapshot
 
     log Withdraw(msg.sender, value, block.timestamp)
     log Supply(supply_before, supply_before - value)
@@ -541,7 +541,7 @@ def force_withdraw():
   time_left: uint256 = _locked.end - block.timestamp
   penalty_ratio: uint256 = (MULTIPLIER * time_left / MAXTIME) * self.max_penalty / 100
   value: uint256 = convert(_locked.amount, uint256)
-  IVeRBNRewards(self.reward_pool).updateReward(msg.sender) # Reward pool snapshot
+#   IVeRBNRewards(self.reward_pool).updateReward(msg.sender) # Reward pool snapshot
   old_locked: LockedBalance = _locked
   _locked.end = 0
   _locked.amount = 0
@@ -556,8 +556,10 @@ def force_withdraw():
   penalty: uint256 = value * penalty_ratio / MULTIPLIER
   assert ERC20(self.token).transfer(msg.sender, value - penalty)
   if penalty != 0:
-      assert ERC20(self.token).approve(self.reward_pool, penalty)
-      IVeRBNRewards(self.reward_pool).donate(penalty)
+    # TODO: remove next line and use donate(amount) instead
+    assert ERC20(self.token).transfer(self.reward_pool, penalty)
+    #   assert ERC20(self.token).approve(self.reward_pool, penalty)
+    #   IVeRBNRewards(self.reward_pool).donate(penalty)
   log Withdraw(msg.sender, value, block.timestamp)
   log Supply(supply_before, supply_before - value)
 
@@ -608,11 +610,6 @@ def balanceOf(addr: address, _t: uint256 = block.timestamp) -> uint256:
             last_point.bias = 0
         return convert(last_point.bias, uint256)
 
-# TODO: remove
-@external
-@view
-def getCurrBlock() -> uint256:
-    return block.number
 
 @external
 @view
