@@ -281,6 +281,9 @@ describe("VotingEscrow", () => {
         .connect(sa.fundManager.signer)
         .transfer(tom.address, simpleToExactAmount(1, 22));
       await mta
+        .connect(sa.fundManager.signer)
+        .transfer(sa.dummy6.address, simpleToExactAmount(1, 22));
+      await mta
         .connect(alice.signer)
         .approve(votingLockup.address, simpleToExactAmount(100, 21));
       await mta
@@ -297,6 +300,9 @@ describe("VotingEscrow", () => {
         .approve(votingLockup.address, simpleToExactAmount(100, 21));
       await mta
         .connect(tom.signer)
+        .approve(votingLockup.address, simpleToExactAmount(100, 21));
+      await mta
+        .connect(sa.dummy6.signer)
         .approve(votingLockup.address, simpleToExactAmount(100, 21));
     });
     describe("checking initial settings", () => {
@@ -518,6 +524,9 @@ describe("VotingEscrow", () => {
         await votingLockup
           .connect(tom.signer)
           .create_lock(stakeAmt1, (await getTimestamp()).add(ONE_YEAR.add(ONE_WEEK.mul(14))));
+        await votingLockup
+          .connect(sa.dummy6.signer)
+          .create_lock(stakeAmt1, (await getTimestamp()).add(ONE_YEAR.add(ONE_WEEK.mul(14))));
         await increaseTime(ONE_WEEK.mul(14));
         await votingLockup.connect(sa.fundManager.signer).set_reward_pool(sa.governor.address)
       });
@@ -572,6 +581,23 @@ describe("VotingEscrow", () => {
         await expect(
           votingLockup.connect(david.signer).force_withdraw()
         ).to.be.revertedWith("lock expired");
+      });
+    it("allows force withdraw with updated penalty", async () => {
+        await votingLockup.connect(sa.fundManager.signer).set_max_penalty(50)
+        
+        // Tom is a double agent?????
+        const tomBefore = await snapshotData(sa.dummy6);
+        await votingLockup.connect(sa.dummy6.signer).force_withdraw();
+        const tomAfter = await snapshotData(sa.dummy6);
+        const tomTimeLeft = tomBefore.userLocked.end.sub(await getTimestamp());
+        const tomAmount = tomBefore.userLocked.amount;
+
+        assertBNClosePercent(
+          tomAfter.senderStakingTokenBalance, 
+          tomBefore.senderStakingTokenBalance.add(tomAmount.sub(tomAmount.mul(tomTimeLeft).div(ONE_YEAR.mul(2)).div(2))),
+          "0.04"
+        );
+
       });
     });
   });
