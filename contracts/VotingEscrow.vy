@@ -89,6 +89,9 @@ event Supply:
     prevSupply: uint256
     supply: uint256
 
+event PenaltyUpdated:
+    new_penalty: uint256
+
 
 WEEK: constant(uint256) = 7 * 86400  # all future times are rounded by week
 MINTIME: constant(uint256) = 30 * 86400 # 1 month
@@ -145,7 +148,7 @@ def __init__(token_addr: address, _name: String[64], _symbol: String[32], _admin
     self.name = _name
     self.symbol = _symbol
 
-    self.max_penalty = 50 # 50 percent
+    self.max_penalty = 100 # 100 percent
 
 @external
 def set_reward_pool(addr: address):
@@ -155,9 +158,14 @@ def set_reward_pool(addr: address):
 
 @external
 def set_max_penalty(_max_penalty: uint256):
+    """
+    @notice Update maximum withdraw penalty
+    @param _max_penalty New maximum penalty
+    """
     assert msg.sender == self.admin
     assert _max_penalty >= 0 and _max_penalty <= 100
     self.max_penalty = _max_penalty
+    log PenaltyUpdated(_max_penalty)
 
 @external
 def commit_transfer_ownership(addr: address):
