@@ -30,6 +30,7 @@ import {
   DEFAULT_DECIMALS,
 } from "./utilities/constants";
 import { Account } from "./utilities/types";
+import { pathToFileURL } from "url";
 
 chai.use(solidity);
 
@@ -71,6 +72,9 @@ describe("VotingEscrow", () => {
     );
 
     await votingLockup.deployed();
+    // console.log(sa.governor.address, sa.dummy7.address)
+    // await votingLockup.connect(sa.fundManager.signer).set_reward_pool(sa.governor.address)
+    // console.log(await votingLockup.reward_pool())
   });
 
   const goToNextUnixWeekStart = async () => {
@@ -240,6 +244,7 @@ describe("VotingEscrow", () => {
     let charlie: Account;
     let david: Account;
     let eve: Account;
+    let tom: Account;
 
     const stakeAmt1 = simpleToExactAmount(10, DEFAULT_DECIMALS);
     const stakeAmt2 = simpleToExactAmount(1000, DEFAULT_DECIMALS);
@@ -251,6 +256,7 @@ describe("VotingEscrow", () => {
       charlie = sa.dummy2;
       david = sa.dummy3;
       eve = sa.dummy4;
+      tom = sa.dummy7;
 
       await goToNextUnixWeekStart();
       start = await getTimestamp();
@@ -272,6 +278,9 @@ describe("VotingEscrow", () => {
         .connect(sa.fundManager.signer)
         .transfer(eve.address, simpleToExactAmount(1, 22));
       await mta
+        .connect(sa.fundManager.signer)
+        .transfer(tom.address, simpleToExactAmount(1, 22));
+      await mta
         .connect(alice.signer)
         .approve(votingLockup.address, simpleToExactAmount(100, 21));
       await mta
@@ -285,6 +294,9 @@ describe("VotingEscrow", () => {
         .approve(votingLockup.address, simpleToExactAmount(100, 21));
       await mta
         .connect(eve.signer)
+        .approve(votingLockup.address, simpleToExactAmount(100, 21));
+      await mta
+        .connect(tom.signer)
         .approve(votingLockup.address, simpleToExactAmount(100, 21));
     });
     describe("checking initial settings", () => {
@@ -503,7 +515,11 @@ describe("VotingEscrow", () => {
         await votingLockup
           .connect(david.signer)
           .create_lock(stakeAmt1, (await getTimestamp()).add(ONE_WEEK.mul(13)));
+        await votingLockup
+          .connect(tom.signer)
+          .create_lock(stakeAmt1, (await getTimestamp()).add(ONE_YEAR.add(ONE_WEEK.mul(14))));
         await increaseTime(ONE_WEEK.mul(14));
+        await votingLockup.connect(sa.fundManager.signer).set_reward_pool(sa.governor.address)
       });
       it("allows user to withdraw", async () => {
         // david withdraws
@@ -526,8 +542,36 @@ describe("VotingEscrow", () => {
         );
 
         await expect(
-          votingLockup.connect(alice.signer).withdraw()
+          votingLockup.connect(tom.signer).withdraw()
         ).to.be.revertedWith("The lock didn't expire");
+      });
+
+      it("allows force withdraw with penalty", async () => {
+        
+        console.log(await votingLockup.reward_pool())
+        const tomBefore = await snapshotData(tom);
+        await votingLockup.connect(tom.signer).force_withdraw();
+        const tomAfter = await snapshotData(tom);
+        const tomTimeLeft = tomBefore.userLocked.end.sub(await getTimestamp());
+        const tomAmount = tomBefore.userLocked.amount;
+
+        assertBNClosePercent(
+          tomAfter.senderStakingTokenBalance, 
+          tomBefore.senderStakingTokenBalance.add(tomAmount.sub(tomAmount.mul(tomTimeLeft).div(ONE_YEAR.mul(2)))),
+          "0.04"
+        );
+
+        expect(tomAfter.userLastPoint.bias).eq(BN.from(0));
+        expect(tomAfter.userLastPoint.slope).eq(BN.from(0));
+        expect(tomAfter.userLocked.amount).eq(BN.from(0));
+        expect(tomAfter.userLocked.end).eq(BN.from(0));
+        expect(tomAfter.totalLocked).eq(
+          tomBefore.totalLocked.sub(tomBefore.userLocked.amount)
+        );
+
+        await expect(
+          votingLockup.connect(david.signer).force_withdraw()
+        ).to.be.revertedWith("lock expired");
       });
     });
   });
