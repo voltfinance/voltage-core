@@ -542,7 +542,7 @@ def force_withdraw():
   With a 2 years lock on withdraw, you pay 75% penalty during the first 6 months.
   penalty decrease linearly to zero starting when time left is under 1.5 years.
   """
-  assert(self.is_unlocked == False)
+  assert self.is_unlocked == False, "Funds are unlocked, use normal withdraw()"
   _locked: LockedBalance = self.locked[msg.sender]
   assert block.timestamp < _locked.end, "lock expired"
 
