@@ -245,6 +245,7 @@ describe("VotingEscrow", () => {
     let david: Account;
     let eve: Account;
     let tom: Account;
+    let aliya: Account;
 
     const stakeAmt1 = simpleToExactAmount(10, DEFAULT_DECIMALS);
     const stakeAmt2 = simpleToExactAmount(1000, DEFAULT_DECIMALS);
@@ -256,6 +257,7 @@ describe("VotingEscrow", () => {
       charlie = sa.dummy2;
       david = sa.dummy3;
       eve = sa.dummy4;
+      aliya = sa.dummy5;
       tom = sa.dummy7;
 
       await goToNextUnixWeekStart();
@@ -284,6 +286,9 @@ describe("VotingEscrow", () => {
         .connect(sa.fundManager.signer)
         .transfer(sa.dummy6.address, simpleToExactAmount(1, 22));
       await mta
+        .connect(sa.fundManager.signer)
+        .transfer(aliya.address, simpleToExactAmount(1, 22));
+      await mta
         .connect(alice.signer)
         .approve(votingLockup.address, simpleToExactAmount(100, 21));
       await mta
@@ -303,6 +308,9 @@ describe("VotingEscrow", () => {
         .approve(votingLockup.address, simpleToExactAmount(100, 21));
       await mta
         .connect(sa.dummy6.signer)
+        .approve(votingLockup.address, simpleToExactAmount(100, 21));
+      await mta
+        .connect(aliya.signer)
         .approve(votingLockup.address, simpleToExactAmount(100, 21));
     });
     describe("checking initial settings", () => {
@@ -598,6 +606,23 @@ describe("VotingEscrow", () => {
           "0.04"
         );
 
+      });
+      it("allows emergency withdraw in case of is_unlocked", async () => {
+        await votingLockup.connect(sa.fundManager.signer).set_funds_unlocked(true);
+
+        await expect(votingLockup.connect(aliya.signer).force_withdraw()).to.be.revertedWith("Funds are unlocked, use normal withdraw()")
+
+        const aliyaBefore = await snapshotData(aliya);
+        await votingLockup.connect(aliya.signer).withdraw();
+        const aliyaAfter = await snapshotData(aliya);
+
+        assertBNClosePercent(
+          aliyaAfter.senderStakingTokenBalance,
+          aliyaAfter.senderStakingTokenBalance.add(aliyaBefore.userLocked.amount),
+          "0.04"
+        )
+
+        await votingLockup.connect(sa.fundManager.signer).set_funds_unlocked(false);
       });
     });
   });
