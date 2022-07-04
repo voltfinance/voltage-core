@@ -31,6 +31,8 @@ import {
 } from "./utilities/constants";
 import { Account } from "./utilities/types";
 import { pathToFileURL } from "url";
+import { setMaxListeners } from "process";
+import { assert } from "console";
 
 chai.use(solidity);
 
@@ -625,6 +627,66 @@ describe("VotingEscrow", () => {
         await votingLockup.connect(sa.fundManager.signer).set_funds_unlocked(false);
       });
     });
+
+    describe('testing bulk balance calculator with threshold', () => {
+      before(async () => {
+        await deployFresh();
+        await mta
+          .connect(sa.fundManager.signer)
+          .transfer(alice.address, simpleToExactAmount(1, 22));
+        await mta
+          .connect(sa.fundManager.signer)
+          .transfer(bob.address, simpleToExactAmount(1, 22));
+        await mta
+          .connect(sa.fundManager.signer)
+          .transfer(david.address, simpleToExactAmount(1, 22));
+        await mta
+          .connect(sa.fundManager.signer)
+          .transfer(tom.address, simpleToExactAmount(1, 22));
+        await mta
+          .connect(alice.signer)
+          .approve(votingLockup.address, simpleToExactAmount(100, 21));
+        await mta
+          .connect(bob.signer)
+          .approve(votingLockup.address, simpleToExactAmount(100, 21));
+        await mta
+          .connect(david.signer)
+          .approve(votingLockup.address, simpleToExactAmount(100, 21));
+        await mta
+          .connect(tom.signer)
+          .approve(votingLockup.address, simpleToExactAmount(100, 21));
+        await votingLockup
+          .connect(alice.signer)
+          .create_lock(stakeAmt1, (await getTimestamp()).add(ONE_WEEK.mul(5)));
+        await votingLockup
+          .connect(bob.signer)
+          .create_lock(stakeAmt1, (await getTimestamp()).add(ONE_WEEK.mul(10)));
+        await votingLockup
+          .connect(david.signer)
+          .create_lock(stakeAmt1, (await getTimestamp()).add(ONE_YEAR));
+        await votingLockup
+          .connect(tom.signer)
+          .create_lock(stakeAmt1, (await getTimestamp()).add(ONE_YEAR.mul(2)));
+      });
+      it("It calculates the custom total supply", async () => {
+        const at = (await getTimestamp())
+        let _sm = BN.from(0)
+        _sm = _sm.add(await votingLockup["balanceOf(address,uint256)"](alice.address, at))
+        _sm = _sm.add(await votingLockup["balanceOf(address,uint256)"](bob.address, at))
+        _sm = _sm.add(await votingLockup["balanceOf(address,uint256)"](david.address, at))
+        _sm = _sm.add(await votingLockup["balanceOf(address,uint256)"](tom.address, at))
+        console.log(_sm)
+        console.log(await votingLockup.calculate_balances_range_threshold(0, 5, ONE_DAY, at))
+
+        expect(await votingLockup.userCnt()).to.be.eq(4)
+        expect(await votingLockup.users(1)).to.be.eq(alice.address)
+        expect(await votingLockup.users(2)).to.be.eq(bob.address)
+        expect(await votingLockup.users(3)).to.be.eq(david.address)
+        expect(await votingLockup.users(4)).to.be.eq(tom.address)
+        // failing here ; calculate_balances_range_threshold returning 0
+        expect(await votingLockup.calculate_balances_range_threshold(0, 5, ONE_WEEK.mul(4), at.add(ONE_DAY))).to.be.eq(_sm)
+      })
+    })
   });
 
   // Integration test ported from
@@ -1153,7 +1215,7 @@ describe("VotingEscrow", () => {
           .create_lock(stakeAmt1, start.add(ONE_YEAR));
       const receipt = await tx.wait()
       console.log(receipt.gasUsed.toNumber())
-      expect(receipt.gasUsed.toNumber()).lt(400000);
+      expect(receipt.gasUsed.toNumber()).lt(460000);
     });
   })
 });

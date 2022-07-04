@@ -109,6 +109,11 @@ user_point_history: public(HashMap[address, Point[1000000000]])  # user -> Point
 user_point_epoch: public(HashMap[address, uint256])
 slope_changes: public(HashMap[uint256, int128])  # time -> signed slope change
 
+# to store all users in the system
+users: public(address[100000000000000000000])
+userIndex: public(HashMap[address, uint256])
+userCnt: public(uint256)
+
 name: public(String[64])
 symbol: public(String[32])
 decimals: public(uint256)
@@ -230,6 +235,15 @@ def assert_not_contract(addr: address):
                 return
         raise "Smart contract depositors not allowed"
 
+@internal
+def _add_user(addr: address):
+    if(self.userIndex[addr] != 0): return
+    self.userCnt += 1
+    # users starts indexing from 1
+    self.users[self.userCnt] = addr
+    self.userIndex[addr] = self.userCnt
+
+
 
 @external
 @view
@@ -247,7 +261,8 @@ def get_last_user_slope(addr: address) -> int128:
 @view
 def user_point_history__ts(_addr: address, _idx: uint256) -> uint256:
     """
-    @notice Get the timestamp for checkpoint `_idx` for `_addr`
+    @notice Get the t
+    imestamp for checkpoint `_idx` for `_addr`
     @param _addr User wallet address
     @param _idx User epoch number
     @return Epoch time of the checkpoint
@@ -413,6 +428,8 @@ def _deposit_for(_from: address, _addr: address, _value: uint256, unlock_time: u
 
     if _value != 0:
         assert ERC20(self.token).transferFrom(_from, self, _value)
+
+    self._add_user(_addr)
 
     log Deposit(_from, _addr, _value, _locked.end, type, block.timestamp)
     log Supply(supply_before, supply_before + _value)
@@ -736,3 +753,37 @@ def totalSupplyAt(_block: uint256) -> uint256:
     # Now dt contains info on how far are we beyond point
 
     return self.supply_at(point, point.ts + dt)
+
+@external
+@view
+def calculate_balances_range_threshold(_from: uint256, _to: uint256, threshold: uint256, at: uint256) -> uint256:
+    """
+    @notice Get the balances of a range of users at some point of time where they have at least `threshold` left to unlock
+    @param _from Starting index
+    @param _to End index
+    @param threshold minumum amount of time left on lock
+    @param at timestamp of balances
+    @return sum of balances
+    """
+    sm: uint256 = 0
+    for i in range(_from, _from + 10000):
+        if i > _to:
+            break
+        addr: address = self.users[i]
+        _locked: LockedBalance = self.locked[self.users[i]]
+
+        if _locked.end < at + threshold:
+            pass
+
+        _epoch: uint256 = self.user_point_epoch[addr]
+        if _epoch == 0:
+            return 0
+        else:
+            last_point: Point = self.user_point_history[addr][_epoch]
+            last_point.bias -= last_point.slope * convert(at - last_point.ts, int128)
+            if last_point.bias < 0:
+                last_point.bias = 0
+            sm += convert(last_point.bias, uint256)
+        # We might as well use 
+        # _sum += locked[users[i]].amount
+    return sm
