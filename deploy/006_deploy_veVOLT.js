@@ -3,11 +3,14 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   
     const { deployer } = await getNamedAccounts();
   
-    const volt = await ethers.getContract("VoltToken");
+    // const volt = await ethers.getContract("VoltToken");
+    // const voltAddress = volt.address
+    const voltAddress = "0xaB45225DD47f52AC4D836A6c652fe214De10Ac39" // dev address
+    const admin = deployer
 
-    await deploy("VoteEscrowVolt", {
+    await deploy("VotingEscrow", {
       from: deployer,
-      args: [volt.address, "VoteEscrowVolt", "veVOLT", "1.0.0"],
+      args: [voltAddress, "Vote Escrow Volt", "veVOLT", admin],
       log: true,
       deterministicDeployment: false,
     });
