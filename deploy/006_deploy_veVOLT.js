@@ -1,3 +1,5 @@
+const { ethers } = require("hardhat");
+
 module.exports = async function ({ getNamedAccounts, deployments }) {
     const { deploy } = deployments;
   
@@ -14,6 +16,9 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
       log: true,
       deterministicDeployment: false,
     });
+
+    const veContract = await ethers.getContract("VoltToken")
+    await veContract.set_reward_pool(admin) // dummy rewards address
 };
   
 module.exports.tags = ["VoteEscrowVolt"];
