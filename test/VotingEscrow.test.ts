@@ -671,20 +671,15 @@ describe("VotingEscrow", () => {
       it("It calculates the custom total supply", async () => {
         const at = (await getTimestamp())
         let _sm = BN.from(0)
-        _sm = _sm.add(await votingLockup["balanceOf(address,uint256)"](alice.address, at))
-        _sm = _sm.add(await votingLockup["balanceOf(address,uint256)"](bob.address, at))
         _sm = _sm.add(await votingLockup["balanceOf(address,uint256)"](david.address, at))
         _sm = _sm.add(await votingLockup["balanceOf(address,uint256)"](tom.address, at))
-        console.log(_sm)
-        console.log(await votingLockup.calculate_balances_range_threshold(0, 5, ONE_DAY, at))
 
         expect(await votingLockup.userCnt()).to.be.eq(4)
         expect(await votingLockup.users(1)).to.be.eq(alice.address)
         expect(await votingLockup.users(2)).to.be.eq(bob.address)
         expect(await votingLockup.users(3)).to.be.eq(david.address)
         expect(await votingLockup.users(4)).to.be.eq(tom.address)
-        // failing here ; calculate_balances_range_threshold returning 0
-        expect(await votingLockup.calculate_balances_range_threshold(0, 5, ONE_WEEK.mul(4), at.add(ONE_DAY))).to.be.eq(_sm)
+        expect(await votingLockup.calculate_balances_range_threshold(0, 5, ONE_YEAR.div(2), at)).to.be.eq(_sm)
       })
     })
   });

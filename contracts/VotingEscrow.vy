@@ -44,6 +44,8 @@ interface ERC20:
     def transferFrom(spender: address, to: address, amount: uint256) -> bool: nonpayable
     def approve(spender: address, amount: uint256) -> bool: nonpayable
 
+interface IVEToken:
+    def balanceOf(addr: address, _t: uint256) -> uint256: view
 
 interface IVeRBNRewards:
     def updateReward(_account: address) -> bool: nonpayable
@@ -94,7 +96,7 @@ event PenaltyUpdated:
 
 
 WEEK: constant(uint256) = 7 * 86400  # all future times are rounded by week
-MINTIME: constant(uint256) = 30 * 86400 # 1 month
+MINTIME: constant(uint256) = 28 * 86400 # 4 weeks
 MAXTIME: constant(uint256) = 2 * 365 * 86400  # 2 years
 MULTIPLIER: constant(uint256) = 10 ** 18
 
@@ -428,6 +430,7 @@ def _deposit_for(_from: address, _addr: address, _value: uint256, unlock_time: u
 
     if _value != 0:
         assert ERC20(self.token).transferFrom(_from, self, _value)
+        # TODO: replace transferFrom with approve and reward_pool.donate(_value);
 
     self._add_user(_addr)
 
@@ -766,24 +769,14 @@ def calculate_balances_range_threshold(_from: uint256, _to: uint256, threshold: 
     @return sum of balances
     """
     sm: uint256 = 0
+    # return sm
     for i in range(_from, _from + 10000):
         if i > _to:
             break
         addr: address = self.users[i]
-        _locked: LockedBalance = self.locked[self.users[i]]
+        _locked: LockedBalance = self.locked[addr]
 
         if _locked.end < at + threshold:
-            pass
-
-        _epoch: uint256 = self.user_point_epoch[addr]
-        if _epoch == 0:
-            return 0
-        else:
-            last_point: Point = self.user_point_history[addr][_epoch]
-            last_point.bias -= last_point.slope * convert(at - last_point.ts, int128)
-            if last_point.bias < 0:
-                last_point.bias = 0
-            sm += convert(last_point.bias, uint256)
-        # We might as well use 
-        # _sum += locked[users[i]].amount
+            continue
+        sm += IVEToken(self).balanceOf(addr, at)
     return sm
