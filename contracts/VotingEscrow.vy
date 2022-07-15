@@ -47,6 +47,9 @@ interface ERC20:
 interface IVEToken:
     def balanceOf(addr: address, _t: uint256) -> uint256: view
 
+interface IPenaltyHandler:
+    def donate(amount: uint256) -> bool: nonpayable
+
 # Interface for checking whether address belongs to a whitelisted
 # type of a smart wallet.
 # When new types are added - the whole contract is changed
@@ -126,12 +129,12 @@ future_admin: public(address)
 
 is_unlocked: public(bool)
 
-reward_pool: public(address)
+penalty_handler: public(address)
 
 max_penalty: public(uint256)
 
 @external
-def __init__(token_addr: address, _name: String[64], _symbol: String[32], _admin: address):
+def __init__(token_addr: address, _name: String[64], _symbol: String[32], _admin: address, _penalty_handler: address):
     """
     @notice Contract constructor
     @param token_addr `ERC20CRV` token address
@@ -141,6 +144,7 @@ def __init__(token_addr: address, _name: String[64], _symbol: String[32], _admin
     """
     self.admin = _admin
     self.token = token_addr
+    self.penalty_handler = _penalty_handler
     self.point_history[0].blk = block.number
     self.point_history[0].ts = block.timestamp
 
@@ -154,10 +158,10 @@ def __init__(token_addr: address, _name: String[64], _symbol: String[32], _admin
     self.max_penalty = 100 # 100 percent
 
 @external
-def set_reward_pool(addr: address):
-  assert msg.sender == self.admin or self.reward_pool == ZERO_ADDRESS # dev: admin only
+def set_penalty_handler(addr: address):
+  assert msg.sender == self.admin or self.penalty_handler == ZERO_ADDRESS # dev: admin only
   assert addr != ZERO_ADDRESS
-  self.reward_pool = addr
+  self.penalty_handler = addr
 
 @external
 def set_max_penalty(_max_penalty: uint256):
@@ -574,7 +578,7 @@ def force_withdraw():
   penalty: uint256 = value * penalty_ratio / MULTIPLIER
   assert ERC20(self.token).transfer(msg.sender, value - penalty)
   if penalty != 0:
-    assert ERC20(self.token).transfer(self.reward_pool, penalty)
+    assert(IPenaltyHandler(self.penalty_handler)).donate(penalty)
   log Withdraw(msg.sender, value, block.timestamp)
   log Supply(supply_before, supply_before - value)
 
