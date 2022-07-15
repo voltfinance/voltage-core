@@ -8,18 +8,16 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     // const volt = await ethers.getContract("VoltToken");
     // const voltAddress = volt.address
     const voltAddress = "0xaB45225DD47f52AC4D836A6c652fe214De10Ac39" // dev address
+    const penaltyHandler = await ethers.getContract("PenaltyHandler");
     const admin = deployer
 
     await deploy("VotingEscrow", {
       from: deployer,
-      args: [voltAddress, "Vote Escrow Volt", "veVOLT", admin],
+      args: [voltAddress, "Vote Escrow Volt", "veVOLT", admin, penaltyHandler.address],
       log: true,
       deterministicDeployment: false,
     });
-
-    const veContract = await ethers.getContract("VoltToken")
-    await veContract.set_reward_pool(admin) // dummy rewards address
 };
   
 module.exports.tags = ["VoteEscrowVolt"];
-module.exports.dependencies = ["VoltToken"]
+module.exports.dependencies = ["VoltToken", "PenaltyHandler"]
