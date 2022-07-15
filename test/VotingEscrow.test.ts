@@ -3,15 +3,11 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 
 import { Contract, ContractFactory } from "@ethersproject/contracts";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
-// import chai from "chai";
 const chai = require("chai")
 import { ethers } from "hardhat";
 import { solidity } from "ethereum-waffle";
-import { assertBNClose, assertBNClosePercent } from "./utilities/assertions";
-import { takeSnapshot, revertToSnapShot } from "./utilities/time";
-import { addSnapshotBeforeRestoreAfterEach } from "./utilities/common";
+import { assertBNClosePercent } from "./utilities/assertions";
 import {
   advanceBlock,
   getTimestamp,
@@ -19,49 +15,42 @@ import {
   increaseTimeTo,
   latestBlock,
 } from "./utilities/time";
-import { BN, simpleToExactAmount, maximum, sqrt } from "./utilities/math";
+import { BN, simpleToExactAmount, maximum } from "./utilities/math";
 import { StandardAccounts } from "./utilities/machines";
 import {
   ONE_WEEK,
   ONE_HOUR,
   ONE_DAY,
   ONE_YEAR,
-  ZERO_ADDRESS,
   DEFAULT_DECIMALS,
 } from "./utilities/constants";
 import { Account } from "./utilities/types";
-import { pathToFileURL } from "url";
-import { setMaxListeners } from "process";
-import { assert } from "console";
 
 chai.use(solidity);
 
 describe("VotingEscrow", () => {
   let VoltToken: ContractFactory;
   let VotingEscrow: ContractFactory;
+  let PenaltyHandler: ContractFactory;
 
   let mta: Contract,
     votingLockup: Contract,
+    penaltyHandler: Contract,
     sa: StandardAccounts;
 
   before("Init contract", async () => {
     const accounts = await ethers.getSigners();
     sa = await new StandardAccounts().initAccounts(accounts);
 
-    // Get VOLT token
     VoltToken = await ethers.getContractFactory("VoltToken", sa.fundManager.signer);
-    // mta = await VoltToken.deploy(
-    //   "Volt Token",
-    //   "VOLT",
-    //   simpleToExactAmount(1000000000, DEFAULT_DECIMALS),
-    //   sa.fundManager.address
-    // );
     mta = await VoltToken.deploy()
 
     await mta.deployed();
     await mta.connect(sa.fundManager.signer).mint(sa.fundManager.address, simpleToExactAmount(1000000000, DEFAULT_DECIMALS))
 
-    // await mta.connect(sa.fundManager.signer).setTransfersAllowed(true);
+    PenaltyHandler = await ethers.getContractFactory("PenaltyHandler");
+    penaltyHandler = await PenaltyHandler.deploy(sa.governor.address, 7000, mta.address);
+    await penaltyHandler.deployed();
 
     VotingEscrow = await ethers.getContractFactory(
       "VotingEscrow"
@@ -70,13 +59,11 @@ describe("VotingEscrow", () => {
       mta.address,
       "Vote-escrowed Volt",
       "veVOLT",
-      sa.fundManager.address
+      sa.fundManager.address,
+      penaltyHandler.address
     );
 
     await votingLockup.deployed();
-    // console.log(sa.governor.address, sa.dummy7.address)
-    // await votingLockup.connect(sa.fundManager.signer).set_reward_pool(sa.governor.address)
-    // console.log(await votingLockup.reward_pool())
   });
 
   const goToNextUnixWeekStart = async () => {
@@ -85,9 +72,6 @@ describe("VotingEscrow", () => {
     await increaseTimeTo(nextUnixWeek);
   };
 
-  const calcBias = async (amount: BN, len: BN): Promise<BN> => {
-    return amount.div(ONE_YEAR.mul(4)).mul(len);
-  };
 
   const deployFresh = async () => {
     await mta
@@ -103,7 +87,8 @@ describe("VotingEscrow", () => {
       mta.address,
       "Vote-escrowed VOLT",
       "veVOLT",
-      sa.fundManager.address
+      sa.fundManager.address,
+      penaltyHandler.address
     );
 
     await votingLockup.deployed();
@@ -131,7 +116,6 @@ describe("VotingEscrow", () => {
     });
     describe("before any stakes are made", () => {
       it("returns balances", async () => {
-        // console.log(await votingLockup.getPriorVotes(sa.default.address, 1))
         expect(await votingLockup["balanceOf(address)"](sa.default.address)).eq(
           BN.from(0)
         );
@@ -443,11 +427,6 @@ describe("VotingEscrow", () => {
               .connect(david.signer)
               .increase_unlock_time((await getTimestamp()).add(ONE_WEEK))
           ).to.be.revertedWith("Lock expired");
-          // await expect(
-          //   votingLockup
-          //     .connect(alice.signer)
-          //     .increase_unlock_time((await getTimestamp()).add(ONE_DAY.mul(29)))
-          // ).to.be.revertedWith("Voting lock can be 1 month min");
           await expect(
             votingLockup
               .connect(bob.signer)
@@ -485,9 +464,6 @@ describe("VotingEscrow", () => {
         await expect(
           votingLockup.connect(alice.signer).withdraw()
         ).to.be.revertedWith("The lock didn't expire");
-        // await expect(
-        //   votingLockup.connect(david.signer).withdraw()
-        // ).to.be.revertedWith("Must have something to withdraw");
       });
     });
 
@@ -518,8 +494,6 @@ describe("VotingEscrow", () => {
         )
         const e = await votingLockup.user_point_epoch(alice.address);
         const p = await votingLockup.user_point_history(alice.address, e);
-        console.log({epoch, e, p})
-        console.log(userLastPoint)
         expect(userLastPoint[0]).eq(p[0]);
         expect(userLastPoint[1]).eq(p[1]);
         expect(userLastPoint[2]).eq(p[2]);
@@ -538,7 +512,6 @@ describe("VotingEscrow", () => {
           .connect(sa.dummy6.signer)
           .create_lock(stakeAmt1, (await getTimestamp()).add(ONE_YEAR.add(ONE_WEEK.mul(14))));
         await increaseTime(ONE_WEEK.mul(14));
-        await votingLockup.connect(sa.fundManager.signer).set_reward_pool(sa.governor.address)
       });
       it("allows user to withdraw", async () => {
         // david withdraws
@@ -567,7 +540,6 @@ describe("VotingEscrow", () => {
 
       it("allows force withdraw with penalty", async () => {
         
-        console.log(await votingLockup.reward_pool())
         const tomBefore = await snapshotData(tom);
         await votingLockup.connect(tom.signer).force_withdraw();
         const tomAfter = await snapshotData(tom);
@@ -595,7 +567,6 @@ describe("VotingEscrow", () => {
     it("allows force withdraw with updated penalty", async () => {
         await votingLockup.connect(sa.fundManager.signer).set_max_penalty(50)
         
-        // Tom is a double agent?????
         const tomBefore = await snapshotData(sa.dummy6);
         await votingLockup.connect(sa.dummy6.signer).force_withdraw();
         const tomAfter = await snapshotData(sa.dummy6);
