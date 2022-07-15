@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract PenaltyHandler is Ownable {
-    address public BURN_ADDRESS = 0xc2220646E1E76D5fF3a441eDd9E8EFF0e4A8EF03; // Eth bridge address
+    address public BURN_ADDRESS = 0x0000000000000000000000000000000000000001; 
     uint256 public HUNDRED = 10000;
 
     address public feeDistributor;
