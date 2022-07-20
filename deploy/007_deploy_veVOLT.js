@@ -5,9 +5,8 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   
     const { deployer } = await getNamedAccounts();
   
-    // const volt = await ethers.getContract("VoltToken");
-    // const voltAddress = volt.address
-    const voltAddress = "0xaB45225DD47f52AC4D836A6c652fe214De10Ac39" // dev address
+    const volt = await ethers.getContract("VoltToken");
+    const voltAddress = volt.address
     const penaltyHandler = await ethers.getContract("PenaltyHandler");
     const admin = deployer
 

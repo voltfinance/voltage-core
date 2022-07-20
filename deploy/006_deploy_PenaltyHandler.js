@@ -3,9 +3,8 @@ module.exports = async function ({ ethers, deployments, getNamedAccounts }) {
 
   const { deployer } = await getNamedAccounts();
 
-  // const volt = await ethers.getContract("VoltToken");
-  const volt = "0xaB45225DD47f52AC4D836A6c652fe214De10Ac39";
-  // const feeDistributor = await ethers.getContract("RewardPool");
+  const volt = await ethers.getContract("VoltToken");
+  // const feeDistributor = await ethers.getContract("FeeShare");
   const feeDistributor = deployer;
   const burnPercent  = 7000;
 
@@ -14,7 +13,7 @@ module.exports = async function ({ ethers, deployments, getNamedAccounts }) {
     args: [
         feeDistributor,
         burnPercent,
-        volt
+        volt.address
     ],
     log: true,
     deterministicDeployment: false,
@@ -23,4 +22,4 @@ module.exports = async function ({ ethers, deployments, getNamedAccounts }) {
 
 module.exports.tags = ["PenaltyHandler", "chef"];
 module.exports.dependencies = ["VoltToken"]
-// module.exports.dependencies = ["VoltToken", "RewardPool"]
+// module.exports.dependencies = ["VoltToken", "FeeShare"]
