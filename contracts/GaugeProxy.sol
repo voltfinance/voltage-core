@@ -668,9 +668,7 @@ contract GaugeProxy is ProtocolGovernance {
     
     // Fetches VOLT
     function collect() public {
-        (uint _locked,) = MASTER.userInfo(pid, address(this));
-        MASTER.withdraw(pid, _locked);
-        deposit();
+        MASTER.deposit(pid, 0);
     }
     
     function length() external view returns (uint) {
