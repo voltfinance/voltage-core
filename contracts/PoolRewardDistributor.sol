@@ -17,8 +17,17 @@ contract PoolRewardDistributor is BoringOwnable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
+    
+    struct Pool {
+        uint256 pid; // id of pool
+        uint256 rewardAmount; // amount of rewards to distribue
+    }
+
     address public immutable masterChef;
     address public immutable WETH;
+
+    uint256 public totalRewardAmount;
+    Pool[] public pools;
 
     constructor(address _masterChef, address _WETH) public {
         masterChef = _masterChef;
@@ -27,8 +36,8 @@ contract PoolRewardDistributor is BoringOwnable {
 
     function recoverFuse() public onlyOwner {
         uint256 fuseBalance = address(this).balance;
-        address payable _owner = address(this);
-        _owner.call{value: fuseBalance}("");
+        (bool sent,) = payable(owner).call{value: fuseBalance}("");
+        require(sent);
     }
 
     function recoverToken(address token) public onlyOwner {
@@ -36,24 +45,68 @@ contract PoolRewardDistributor is BoringOwnable {
         IERC20(token).transfer(owner, tokenBalance);
     }
 
-    function _distributeRewards(uint256 rewardAmount) internal {
-        uint256 pools = IMasterChef(masterChef).poolLength();
-        uint256 totalAllocPoints = IMasterChef(masterChef).totalAllocPoint();
+    function addPools(Pool[] memory _pools) external onlyOwner {
+        for (uint256 i = 0; i < _pools.length; i++) {
+            _addPool(_pools[i]);
+        }
+    }
 
-        for (uint256 i = 0; i < pools; i++) {
-            IMasterChef.PoolInfo memory pool = IMasterChef(masterChef).poolInfo(i);
-            uint256 amount = (pool.allocPoint.div(totalAllocPoints)).mul(rewardAmount);
+    function addPool(Pool memory _pool) external onlyOwner {
+        _addPool(_pool);
+    }
+
+    function removePool(uint256 _pid) external onlyOwner {
+        _removePool(_pid);
+    }
+
+    function distributeRewards() external payable onlyOwner {
+        for (uint256 i = 0; i < pools.length; i++) {
+            Pool memory pool = pools[i];
+            IMasterChef.PoolInfo memory poolInfo = IMasterChef(masterChef).poolInfo(pool.pid);
             
-            if (address(pool.rewarder) != address(0) && amount > 0) {
-                IWETH(WETH).transfer(address(pool.rewarder), amount);
+            if (address(poolInfo.rewarder) != address(0)) {
+                IWETH(WETH).transfer(address(poolInfo.rewarder), pool.rewardAmount);
             }
         }
     }
 
-    receive() external payable {
-        require(msg.sender == owner);
+    function _addPool(Pool memory _pool) internal {
+        pools.push(_pool);
+        totalRewardAmount = totalRewardAmount.add(_pool.rewardAmount);
+    }
 
-        IWETH(WETH).deposit{value: msg.value}();
-        _distributeRewards(msg.value);
+    function _removePool(uint256 _pid) internal {
+        require(_hasPool(_pid), 'pool not found');
+        uint256 index = _poolIndex(_pid);
+        
+        Pool memory pool = pools[index];
+        totalRewardAmount = totalRewardAmount.sub(pool.rewardAmount);
+        
+        Pool[] storage poolsStorage = pools;
+        
+        for (uint256 i = index; i < poolsStorage.length - 1; i++) {
+            poolsStorage[i] = poolsStorage[i + 1];
+        }
+
+        poolsStorage.pop();
+    }
+
+    function _poolIndex(uint256 _pid) internal view returns (uint256) {
+        require(_hasPool(_pid), 'pool not found');
+        
+        for (uint256 i = 0; i < pools.length; i++) {
+            if (pools[i].pid == _pid) {
+                return i;
+            }
+        }
+    }
+
+    function _hasPool(uint256 _pid) internal view returns (bool) {
+        for (uint256 i = 0; i < pools.length; i++) {
+            if (pools[i].pid == _pid) {
+                return true;
+            }
+        }
+        return false;
     }
 }
