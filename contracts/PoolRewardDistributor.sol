@@ -60,6 +60,8 @@ contract PoolRewardDistributor is BoringOwnable {
     }
 
     function distributeRewards() external payable onlyOwner {
+        IWETH(WETH).deposit{value: msg.value}();
+
         for (uint256 i = 0; i < pools.length; i++) {
             Pool memory pool = pools[i];
             IMasterChef.PoolInfo memory poolInfo = IMasterChef(masterChef).poolInfo(pool.pid);
@@ -76,7 +78,6 @@ contract PoolRewardDistributor is BoringOwnable {
     }
 
     function _removePool(uint256 _pid) internal {
-        require(_hasPool(_pid), 'pool not found');
         uint256 index = _poolIndex(_pid);
         
         Pool memory pool = pools[index];
@@ -92,21 +93,12 @@ contract PoolRewardDistributor is BoringOwnable {
     }
 
     function _poolIndex(uint256 _pid) internal view returns (uint256) {
-        require(_hasPool(_pid), 'pool not found');
-        
         for (uint256 i = 0; i < pools.length; i++) {
             if (pools[i].pid == _pid) {
                 return i;
             }
         }
-    }
 
-    function _hasPool(uint256 _pid) internal view returns (bool) {
-        for (uint256 i = 0; i < pools.length; i++) {
-            if (pools[i].pid == _pid) {
-                return true;
-            }
-        }
-        return false;
+        revert('pool not found');
     }
 }
